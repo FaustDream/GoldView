@@ -1,5 +1,6 @@
 import PyInstaller.__main__
 import os
+import shutil
 
 # 1. 基础打包参数
 params = [
@@ -35,8 +36,22 @@ params = [
     '--exclude-module=PyQt6.QtTest',
 ]
 
+def clean_old_builds():
+    """清理旧的构建和分发文件夹"""
+    folders_to_clean = ['build', 'dist']
+    for folder in folders_to_clean:
+        if os.path.exists(folder):
+            print(f"正在清理旧的 {folder} 文件夹...")
+            try:
+                shutil.rmtree(folder)
+            except Exception as e:
+                print(f"清理 {folder} 时出错: {e}")
+
 # 3. 执行打包
 if __name__ == "__main__":
+    # 先执行清理，确保“只要新应用”
+    clean_old_builds()
+    
     print("正在开始打包 GoldView...")
     PyInstaller.__main__.run(params)
     print("打包完成！请在 dist 目录下查找 GoldView.exe")
