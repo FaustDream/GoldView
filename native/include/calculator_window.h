@@ -16,8 +16,9 @@ public:
 
     bool create(HINSTANCE instanceHandle);
     void show();
-    void hide();
     void focusOrShow();
+    void destroy();
+    bool isCreated() const;
     HWND hwnd() const;
 
 private:
@@ -28,6 +29,9 @@ private:
     void applyFonts();
     void layoutControls(int width, int height);
     void paint();
+    void centerOnScreen() const;
+    void releaseHandles();
+    void releaseFonts();
     void calculate();
     void clearInputs();
     void loadHistory();

@@ -12,7 +12,7 @@ bool isRectValid(const RECT& rect) {
 
 }  // namespace
 
-TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, const DisplaySettings&) const {
+TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, const DisplaySettings& settings) const {
     TaskbarLayoutMetrics metrics{};
     const int taskListWidth = topology.taskListRect.right - topology.taskListRect.left;
     const int taskListHeight = topology.taskListRect.bottom - topology.taskListRect.top;
@@ -23,7 +23,8 @@ TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, 
 
     if (topology.horizontalTaskbar) {
         const int thickness = topology.taskbarRect.bottom - topology.taskbarRect.top;
-        const int width = 144;
+        const int baseWidth = settings.horizontalLayout ? 132 : 96;
+        const int width = baseWidth + (std::clamp)(settings.fontSize, 14, 32) * 2;
 
         if (!topology.taskListUsable) {
             if (!isRectValid(topology.trayRect)) {
@@ -40,10 +41,10 @@ TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, 
             }
 
             metrics.prefersTaskbarReflow = false;
-            metrics.desiredHeight = (std::clamp)(thickness - 12, 20, 36);
+            metrics.desiredHeight = (std::clamp)(thickness - 12, settings.horizontalLayout ? 20 : 28, settings.horizontalLayout ? 42 : 56);
             metrics.desiredWidth = (std::clamp)(width, 120, (std::min)(traySafeWidth, 240));
             metrics.horizontalPadding = 8;
-            metrics.verticalPadding = 4;
+            metrics.verticalPadding = settings.horizontalLayout ? 4 : 6;
             metrics.reason = L"Calculated primary tray fallback metrics";
             return metrics;
         }
@@ -54,13 +55,15 @@ TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, 
             return metrics;
         }
 
-        metrics.desiredHeight = (std::clamp)((std::min)(thickness - 10, taskListHeight - 4), 20, 36);
+        const int minimumHeight = settings.horizontalLayout ? 20 : 28;
+        const int maximumHeight = settings.horizontalLayout ? 42 : 56;
+        metrics.desiredHeight = (std::clamp)((std::min)(thickness - 10, taskListHeight - 4), minimumHeight, maximumHeight);
 
         const int maxWidth = (std::max)(120, (std::max)(taskListWidth * 2, hostWidth / 8));
         const int hostSafeWidth = (std::max)(120, hostWidth / 4);
         metrics.desiredWidth = (std::clamp)(width, 120, (std::min)(maxWidth, hostSafeWidth));
         metrics.horizontalPadding = rightGap < 12 && leftGap > rightGap ? 10 : 6;
-        metrics.verticalPadding = 4;
+        metrics.verticalPadding = settings.horizontalLayout ? 4 : 6;
         metrics.prefersTaskbarReflow = true;
         metrics.reason = L"Calculated horizontal taskbar metrics";
     } else {
@@ -71,8 +74,8 @@ TaskbarLayoutMetrics TaskbarMetrics::calculate(const TaskbarTopology& topology, 
         }
 
         const int thickness = topology.taskbarRect.right - topology.taskbarRect.left;
-        metrics.desiredWidth = (std::clamp)(thickness - 8, 48, 96);
-        metrics.desiredHeight = (std::clamp)(taskListHeight / 4, 48, (std::max)(64, hostHeight / 3));
+        metrics.desiredWidth = (std::clamp)(thickness - 8, settings.horizontalLayout ? 48 : 60, 108);
+        metrics.desiredHeight = (std::clamp)(taskListHeight / 4, settings.horizontalLayout ? 48 : 64, (std::max)(72, hostHeight / 3));
         metrics.reason = L"Calculated vertical taskbar metrics";
     }
 

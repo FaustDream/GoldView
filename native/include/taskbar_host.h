@@ -26,12 +26,14 @@ private:
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT handleMessage(UINT message, WPARAM wParam, LPARAM lParam);
     void paint();
+    HFONT createDisplayFont() const;
 
     HWND windowHandle_ = nullptr;
     HWND parentHandle_ = nullptr;
     bool embeddedInTaskbar_ = false;
     RECT bounds_{};
     std::wstring priceText_ = L"--.--";
+    DisplaySettings settings_{};
 };
 
 }  // namespace goldview

@@ -1,5 +1,6 @@
 #include "app.h"
 
+#include <commctrl.h>
 #include <cstdint>
 #include <shellapi.h>
 #include <sstream>
@@ -11,16 +12,13 @@ namespace goldview {
 namespace {
 
 constexpr UINT kTrayIconId = 1001;
-constexpr UINT kMenuModeTaskbar = 2001;
-constexpr UINT kMenuModeFloating = 2002;
+constexpr UINT kMenuSettings = 2001;
 constexpr UINT kMenuCalculator = 2003;
-constexpr UINT kMenuRefresh05 = 2004;
-constexpr UINT kMenuRefresh10 = 2005;
-constexpr UINT kMenuRefresh20 = 2006;
 constexpr UINT kMenuExit = 2099;
 constexpr wchar_t kHiddenClassName[] = L"GoldViewNativeHiddenWindow";
 constexpr UINT_PTR kTaskbarRecoveryTimer = 3001;
 constexpr int kTaskbarRecoveryThreshold = 3;
+constexpr UINT kSnapshotMessage = WM_APP + 2;
 
 HICON createAppIcon() {
     constexpr int size = 64;
@@ -100,6 +98,18 @@ RECT screenRectToParentClient(HWND parent, const RECT& screenRect) {
     return clientRect;
 }
 
+bool rectFitsInsideParentClient(HWND parent, const RECT& rectInParent) {
+    RECT parentClientRect{};
+    if (!GetClientRect(parent, &parentClientRect)) {
+        return false;
+    }
+
+    return rectInParent.left >= parentClientRect.left &&
+           rectInParent.top >= parentClientRect.top &&
+           rectInParent.right <= parentClientRect.right &&
+           rectInParent.bottom <= parentClientRect.bottom;
+}
+
 }  // namespace
 
 App::App(HINSTANCE instanceHandle)
@@ -111,7 +121,13 @@ App::~App() {
 }
 
 bool App::initialize() {
+    INITCOMMONCONTROLSEX commonControls{};
+    commonControls.dwSize = sizeof(commonControls);
+    commonControls.dwICC = ICC_TAB_CLASSES | ICC_STANDARD_CLASSES;
+    InitCommonControlsEx(&commonControls);
+
     settings_ = settingsStore_.load();
+    settingsStore_.save(settings_);
     taskbarLogger_.info(L"Initializing GoldView native runtime");
 
     WNDCLASSW windowClass{};
@@ -139,22 +155,33 @@ bool App::initialize() {
     }
 
     taskbarHost_ = std::make_unique<TaskbarHost>();
-    floatingHost_ = std::make_unique<FloatingHost>();
     calculatorWindow_ = std::make_unique<CalculatorWindow>(settingsStore_, averageService_);
+    settingsWindow_ = std::make_unique<SettingsWindow>();
     if (!taskbarHost_->create(instanceHandle_) ||
-        !floatingHost_->create(instanceHandle_) ||
-        !calculatorWindow_->create(instanceHandle_)) {
+        !calculatorWindow_->create(instanceHandle_) ||
+        !settingsWindow_->create(instanceHandle_)) {
         taskbarLogger_.error(L"Failed to create window hosts");
         return false;
     }
 
+    settingsWindow_->setSettings(settings_);
+    settingsWindow_->setSettingsChangedCallback([this](const DisplaySettings& settings) {
+        applySettings(settings);
+    });
+    settingsWindow_->setBenchmarkRequestCallback([this]() {
+        priceService_.startBenchmark();
+        refreshSettingsWindow();
+    });
+
     createTrayIcon();
     rebuildMode();
+    priceService_.updateSettings(settings_);
+    refreshSettingsWindow();
 
-    priceService_.start(settings_, [this](const PriceSnapshot& snapshot) {
+    priceService_.start([this](const PriceSnapshot& snapshot) {
         if (hiddenWindow_) {
             auto payload = new PriceSnapshot(snapshot);
-            PostMessageW(hiddenWindow_, WM_APP + 2, 0, reinterpret_cast<LPARAM>(payload));
+            PostMessageW(hiddenWindow_, kSnapshotMessage, 0, reinterpret_cast<LPARAM>(payload));
         }
     });
     return true;
@@ -179,11 +206,11 @@ void App::shutdown() {
         taskbarHost_->detachFromTaskbarContainer();
         taskbarHost_->hide();
     }
-    if (floatingHost_) {
-        floatingHost_->hide();
-    }
     if (calculatorWindow_) {
-        calculatorWindow_->hide();
+        calculatorWindow_->destroy();
+    }
+    if (settingsWindow_) {
+        settingsWindow_->destroy();
     }
     if (hiddenWindow_) {
         DestroyWindow(hiddenWindow_);
@@ -214,34 +241,17 @@ void App::destroyTrayIcon() {
 
 void App::rebuildMode() {
     taskbarHost_->hide();
-    floatingHost_->hide();
 
-    if (settings_.mode == DisplayMode::Taskbar) {
-        taskbarLogger_.info(L"Rebuilding taskbar-left mode");
-        enableTaskbarRecoveryTimer();
-        activeHost_ = static_cast<HostWindow*>(taskbarHost_.get());
-        const auto refresh = refreshTaskbarLayout();
-        if (refresh.shown && activeHost_) {
-            activeHost_->show();
-            activeHost_->updateContent(lastSnapshot_, settings_);
-        } else {
-            taskbarLogger_.warn(L"Taskbar-left mode hidden: " + refresh.failureReason);
-            activeHost_ = nullptr;
-        }
-        return;
-    }
-
-    taskbarLogger_.info(L"Rebuilding desktop-floating mode");
-    disableTaskbarRecoveryTimer();
-    resetTaskbarModeState();
-    slotController_.restore();
-    if (taskbarHost_) {
-        taskbarHost_->detachFromTaskbarContainer();
-    }
-    activeHost_ = static_cast<HostWindow*>(floatingHost_.get());
-    if (activeHost_) {
+    taskbarLogger_.info(L"Rebuilding fixed taskbar display");
+    enableTaskbarRecoveryTimer();
+    activeHost_ = static_cast<HostWindow*>(taskbarHost_.get());
+    const auto refresh = refreshTaskbarLayout();
+    if (refresh.shown && activeHost_) {
         activeHost_->show();
         activeHost_->updateContent(lastSnapshot_, settings_);
+    } else {
+        taskbarLogger_.warn(L"Fixed taskbar display hidden: " + refresh.failureReason);
+        activeHost_ = nullptr;
     }
 }
 
@@ -343,7 +353,18 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
         L" safe=" + rectToString(anchor.safeRect) +
         L" reason=" + anchor.reason);
 
-    const bool useTaskbarReflow = topology->taskListUsable && metrics.prefersTaskbarReflow;
+    bool useTaskbarReflow = topology->taskListUsable && metrics.prefersTaskbarReflow;
+    RECT finalHostRect = anchor.hostRect;
+    if (useTaskbarReflow) {
+        const RECT candidateRectInParent = screenRectToParentClient(topology->hostContainerWnd, finalHostRect);
+        if (!rectFitsInsideParentClient(topology->hostContainerWnd, candidateRectInParent)) {
+            useTaskbarReflow = false;
+            taskbarLogger_.warn(
+                L"Taskbar reflow downgraded to absolute-left-fallback because host rect mapped outside parent client: " +
+                rectToString(candidateRectInParent));
+        }
+    }
+
     const HWND hostParent = useTaskbarReflow ? topology->hostContainerWnd : topology->shellTrayWnd;
     const std::wstring layoutMode = useTaskbarReflow ? L"reflow" : L"absolute-left-fallback";
     result.layoutMode = layoutMode;
@@ -387,7 +408,6 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
         }
     }
 
-    RECT finalHostRect = anchor.hostRect;
     if (useTaskbarReflow) {
         const auto& state = slotController_.state();
         if (!state) {
@@ -446,24 +466,57 @@ void App::applySnapshot(const PriceSnapshot& snapshot) {
     if (activeHost_) {
         activeHost_->updateContent(snapshot, settings_);
     }
-}
-
-void App::toggleMode(DisplayMode mode) {
-    settings_.mode = mode;
-    settingsStore_.save(settings_);
-    priceService_.updateSettings(settings_);
-    rebuildMode();
-}
-
-void App::setRefreshInterval(int intervalMs) {
-    settings_.refreshIntervalMs = intervalMs;
-    settingsStore_.save(settings_);
-    priceService_.updateSettings(settings_);
+    refreshSettingsWindow();
 }
 
 void App::showCalculatorWindow() {
     if (calculatorWindow_) {
+        if (!calculatorWindow_->isCreated()) {
+            calculatorWindow_->create(instanceHandle_);
+        }
         calculatorWindow_->focusOrShow();
+    }
+}
+
+void App::showSettingsWindow() {
+    if (settingsWindow_) {
+        if (!settingsWindow_->isCreated()) {
+            settingsWindow_->create(instanceHandle_);
+            settingsWindow_->setSettings(settings_);
+            settingsWindow_->setSettingsChangedCallback([this](const DisplaySettings& settings) {
+                applySettings(settings);
+            });
+            settingsWindow_->setBenchmarkRequestCallback([this]() {
+                priceService_.startBenchmark();
+                refreshSettingsWindow();
+            });
+            refreshSettingsWindow();
+        }
+        settingsWindow_->focusOrShow();
+    }
+}
+
+void App::applySettings(const DisplaySettings& settings) {
+    settings_ = settings;
+    settingsStore_.save(settings_);
+    priceService_.updateSettings(settings_);
+
+    if (taskbarHost_) {
+        taskbarHost_->updateContent(lastSnapshot_, settings_);
+    }
+
+    const auto refresh = refreshTaskbarLayout();
+    if (refresh.shown && activeHost_) {
+        activeHost_->show();
+        activeHost_->updateContent(lastSnapshot_, settings_);
+    }
+    refreshSettingsWindow();
+}
+
+void App::refreshSettingsWindow() {
+    if (settingsWindow_) {
+        settingsWindow_->setSettings(settings_);
+        settingsWindow_->updateRuntimeStatus(priceService_.currentStatus());
     }
 }
 
@@ -492,23 +545,11 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 
     if (message == WM_COMMAND) {
         switch (LOWORD(wParam)) {
-        case kMenuModeTaskbar:
-            toggleMode(DisplayMode::Taskbar);
-            return 0;
-        case kMenuModeFloating:
-            toggleMode(DisplayMode::Floating);
+        case kMenuSettings:
+            showSettingsWindow();
             return 0;
         case kMenuCalculator:
             showCalculatorWindow();
-            return 0;
-        case kMenuRefresh05:
-            setRefreshInterval(500);
-            return 0;
-        case kMenuRefresh10:
-            setRefreshInterval(1000);
-            return 0;
-        case kMenuRefresh20:
-            setRefreshInterval(2000);
             return 0;
         case kMenuExit:
             PostQuitMessage(0);
@@ -518,7 +559,7 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
         }
     }
 
-    if (message == WM_APP + 2) {
+    if (message == kSnapshotMessage) {
         const auto snapshot = reinterpret_cast<PriceSnapshot*>(lParam);
         if (snapshot) {
             applySnapshot(*snapshot);
@@ -528,30 +569,28 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     }
 
     if (message == WM_TIMER && wParam == kTaskbarRecoveryTimer) {
-        if (settings_.mode == DisplayMode::Taskbar) {
-            const bool needRecovery = taskbarRefreshFailureCount_ > 0 ||
-                !taskbarHost_->isAttachedToTaskbarContainer(lastTaskbarContainer_);
-            if (needRecovery) {
-                const auto refresh = refreshTaskbarLayout();
-                if (refresh.shown && activeHost_) {
-                    activeHost_->show();
-                    activeHost_->updateContent(lastSnapshot_, settings_);
-                }
-            }
-        }
-        return 0;
-    }
-
-    if (message == WM_DISPLAYCHANGE || message == WM_SETTINGCHANGE || message == WM_DPICHANGED) {
-        if (settings_.mode == DisplayMode::Taskbar) {
+        const bool needRecovery = taskbarRefreshFailureCount_ > 0 ||
+            !taskbarHost_->isAttachedToTaskbarContainer(lastTaskbarContainer_);
+        if (needRecovery) {
             const auto refresh = refreshTaskbarLayout();
             if (refresh.shown && activeHost_) {
                 activeHost_->show();
                 activeHost_->updateContent(lastSnapshot_, settings_);
-            } else if (!refresh.shown) {
-                taskbarLogger_.warn(L"Taskbar refresh did not show host: " + refresh.failureReason);
             }
         }
+        refreshSettingsWindow();
+        return 0;
+    }
+
+    if (message == WM_DISPLAYCHANGE || message == WM_SETTINGCHANGE || message == WM_DPICHANGED) {
+        const auto refresh = refreshTaskbarLayout();
+        if (refresh.shown && activeHost_) {
+            activeHost_->show();
+            activeHost_->updateContent(lastSnapshot_, settings_);
+        } else if (!refresh.shown) {
+            taskbarLogger_.warn(L"Taskbar refresh did not show host: " + refresh.failureReason);
+        }
+        refreshSettingsWindow();
         return 0;
     }
 
@@ -560,18 +599,11 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 
 void App::showTrayMenu() {
     HMENU menu = CreatePopupMenu();
-    HMENU refreshMenu = CreatePopupMenu();
-    AppendMenuW(refreshMenu, MF_STRING | (settings_.refreshIntervalMs == 500 ? MF_CHECKED : 0), kMenuRefresh05, L"0.5 秒");
-    AppendMenuW(refreshMenu, MF_STRING | (settings_.refreshIntervalMs == 1000 ? MF_CHECKED : 0), kMenuRefresh10, L"1 秒");
-    AppendMenuW(refreshMenu, MF_STRING | (settings_.refreshIntervalMs == 2000 ? MF_CHECKED : 0), kMenuRefresh20, L"2 秒");
-
-    AppendMenuW(menu, MF_STRING | (settings_.mode == DisplayMode::Taskbar ? MF_CHECKED : 0), kMenuModeTaskbar, L"任务栏左侧模式");
-    AppendMenuW(menu, MF_STRING | (settings_.mode == DisplayMode::Floating ? MF_CHECKED : 0), kMenuModeFloating, L"桌面悬浮模式");
+    AppendMenuW(menu, MF_STRING, kMenuSettings, L"设置");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuCalculator, L"均价计算器");
-    AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(refreshMenu), L"刷新频率");
+    AppendMenuW(menu, MF_STRING, kMenuCalculator, L"Average Calculator");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuExit, L"退出");
+    AppendMenuW(menu, MF_STRING, kMenuExit, L"Exit");
 
     POINT cursorPoint{};
     GetCursorPos(&cursorPoint);

@@ -11,6 +11,8 @@ namespace goldview {
 namespace {
 
 constexpr wchar_t kCalculatorClassName[] = L"GoldViewCalculatorWindow";
+constexpr int kWindowWidth = 420;
+constexpr int kWindowHeight = 560;
 constexpr int kIdOldPrice = 100;
 constexpr int kIdOldWeight = 101;
 constexpr int kIdNewPrice = 102;
@@ -22,19 +24,21 @@ constexpr int kIdResultTotal = 107;
 constexpr int kIdHistory = 108;
 
 void setControlText(HWND control, const std::wstring& text) {
-    SetWindowTextW(control, text.c_str());
+    if (control) {
+        SetWindowTextW(control, text.c_str());
+    }
 }
 
-HWND createLabel(HWND parent, HINSTANCE instanceHandle, const wchar_t* text, int x, int y, int width, int height, int id = 0) {
+HWND createLabel(HWND parent, HINSTANCE instanceHandle, const wchar_t* text, int id = 0) {
     return CreateWindowExW(
         0,
         L"STATIC",
         text,
         WS_CHILD | WS_VISIBLE,
-        x,
-        y,
-        width,
-        height,
+        0,
+        0,
+        0,
+        0,
         parent,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
         instanceHandle,
@@ -79,6 +83,10 @@ CalculatorWindow::CalculatorWindow(SettingsStore& settingsStore, AverageService&
     : settingsStore_(settingsStore), averageService_(averageService) {}
 
 bool CalculatorWindow::create(HINSTANCE instanceHandle) {
+    if (windowHandle_) {
+        return true;
+    }
+
     instanceHandle_ = instanceHandle;
 
     WNDCLASSW windowClass{};
@@ -92,12 +100,12 @@ bool CalculatorWindow::create(HINSTANCE instanceHandle) {
     windowHandle_ = CreateWindowExW(
         WS_EX_TOOLWINDOW,
         kCalculatorClassName,
-        L"GoldView 均价计算器",
+        L"GoldView Average Calculator",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        420,
-        560,
+        0,
+        0,
+        kWindowWidth,
+        kWindowHeight,
         nullptr,
         nullptr,
         instanceHandle,
@@ -110,29 +118,38 @@ bool CalculatorWindow::create(HINSTANCE instanceHandle) {
     createControls();
     applyFonts();
     loadHistory();
+    centerOnScreen();
     return true;
 }
 
 void CalculatorWindow::show() {
+    if (!windowHandle_ && !create(instanceHandle_)) {
+        return;
+    }
+
+    centerOnScreen();
     ShowWindow(windowHandle_, SW_SHOWNORMAL);
     UpdateWindow(windowHandle_);
 }
 
-void CalculatorWindow::hide() {
-    ShowWindow(windowHandle_, SW_HIDE);
-}
-
 void CalculatorWindow::focusOrShow() {
-    if (!windowHandle_) {
+    if (!windowHandle_ && !create(instanceHandle_)) {
         return;
     }
 
-    if (!IsWindowVisible(windowHandle_)) {
-        show();
-    } else {
-        ShowWindow(windowHandle_, SW_RESTORE);
-        SetForegroundWindow(windowHandle_);
+    centerOnScreen();
+    ShowWindow(windowHandle_, IsIconic(windowHandle_) ? SW_RESTORE : SW_SHOWNORMAL);
+    SetForegroundWindow(windowHandle_);
+}
+
+void CalculatorWindow::destroy() {
+    if (windowHandle_) {
+        DestroyWindow(windowHandle_);
     }
+}
+
+bool CalculatorWindow::isCreated() const {
+    return windowHandle_ != nullptr;
 }
 
 HWND CalculatorWindow::hwnd() const {
@@ -172,7 +189,10 @@ LRESULT CalculatorWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lPar
         paint();
         return 0;
     case WM_CLOSE:
-        hide();
+        DestroyWindow(windowHandle_);
+        return 0;
+    case WM_DESTROY:
+        releaseHandles();
         return 0;
     default:
         break;
@@ -182,20 +202,20 @@ LRESULT CalculatorWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lPar
 }
 
 void CalculatorWindow::createControls() {
-    oldPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"原持仓价格 (元/克)", 0, 0, 0, 0);
+    oldPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"Current price");
     oldPriceEdit_ = createEdit(windowHandle_, instanceHandle_, kIdOldPrice);
-    oldWeightLabel_ = createLabel(windowHandle_, instanceHandle_, L"原持仓重量 (克)", 0, 0, 0, 0);
+    oldWeightLabel_ = createLabel(windowHandle_, instanceHandle_, L"Current weight");
     oldWeightEdit_ = createEdit(windowHandle_, instanceHandle_, kIdOldWeight);
 
-    newPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"新买入价格 (元/克)", 0, 0, 0, 0);
+    newPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"Buy price");
     newPriceEdit_ = createEdit(windowHandle_, instanceHandle_, kIdNewPrice);
-    newWeightLabel_ = createLabel(windowHandle_, instanceHandle_, L"新买入重量 (克)", 0, 0, 0, 0);
+    newWeightLabel_ = createLabel(windowHandle_, instanceHandle_, L"Buy weight");
     newWeightEdit_ = createEdit(windowHandle_, instanceHandle_, kIdNewWeight);
 
-    calculateButton_ = createButton(windowHandle_, instanceHandle_, L"开始计算", kIdCalculate);
-    clearButton_ = createButton(windowHandle_, instanceHandle_, L"清空", kIdClear);
-    resultPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"均价: --", 0, 0, 0, 0, kIdResultPrice);
-    resultTotalLabel_ = createLabel(windowHandle_, instanceHandle_, L"总持有量: -- 克", 0, 0, 0, 0, kIdResultTotal);
+    calculateButton_ = createButton(windowHandle_, instanceHandle_, L"Calculate", kIdCalculate);
+    clearButton_ = createButton(windowHandle_, instanceHandle_, L"Clear", kIdClear);
+    resultPriceLabel_ = createLabel(windowHandle_, instanceHandle_, L"Average: --", kIdResultPrice);
+    resultTotalLabel_ = createLabel(windowHandle_, instanceHandle_, L"Total weight: --", kIdResultTotal);
     historyList_ = CreateWindowExW(
         WS_EX_CLIENTEDGE,
         L"LISTBOX",
@@ -210,10 +230,12 @@ void CalculatorWindow::createControls() {
         instanceHandle_,
         nullptr);
 
-    layoutControls(420, 560);
+    layoutControls(kWindowWidth, kWindowHeight);
 }
 
 void CalculatorWindow::applyFonts() {
+    releaseFonts();
+
     titleFont_ = theme::createUiFont(22, FW_BOLD);
     bodyFont_ = theme::createUiFont(18, FW_NORMAL);
     monoFont_ = theme::createMonoFont(20, FW_BOLD);
@@ -235,7 +257,7 @@ void CalculatorWindow::layoutControls(int width, int) {
     const int labelWidth = width - margin * 2;
     const int editWidth = labelWidth;
     const int editHeight = 30;
-    int top = 20;
+    int top = 8;
 
     auto placePair = [&](HWND label, HWND edit) {
         MoveWindow(label, margin, top, labelWidth, 22, TRUE);
@@ -271,14 +293,59 @@ void CalculatorWindow::paint() {
     FillRect(deviceContext, &clientRect, brush);
     DeleteObject(brush);
 
-    SetBkMode(deviceContext, TRANSPARENT);
-    SetTextColor(deviceContext, theme::kTextPrimary);
-    const auto oldFont = SelectObject(deviceContext, titleFont_);
-    RECT titleRect{20, 8, clientRect.right - 20, 36};
-    DrawTextW(deviceContext, L"GoldView 均价计算器", -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-    SelectObject(deviceContext, oldFont);
-
     EndPaint(windowHandle_, &paintStruct);
+}
+
+void CalculatorWindow::centerOnScreen() const {
+    if (!windowHandle_) {
+        return;
+    }
+
+    RECT windowRect{};
+    GetWindowRect(windowHandle_, &windowRect);
+    const int width = windowRect.right - windowRect.left;
+    const int height = windowRect.bottom - windowRect.top;
+    MONITORINFO monitorInfo{};
+    monitorInfo.cbSize = sizeof(monitorInfo);
+    GetMonitorInfoW(MonitorFromWindow(windowHandle_, MONITOR_DEFAULTTONEAREST), &monitorInfo);
+
+    const RECT& workRect = monitorInfo.rcWork;
+    const int x = workRect.left + ((workRect.right - workRect.left) - width) / 2;
+    const int y = workRect.top + ((workRect.bottom - workRect.top) - height) / 2;
+    SetWindowPos(windowHandle_, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+}
+
+void CalculatorWindow::releaseHandles() {
+    releaseFonts();
+    windowHandle_ = nullptr;
+    oldPriceLabel_ = nullptr;
+    oldPriceEdit_ = nullptr;
+    oldWeightLabel_ = nullptr;
+    oldWeightEdit_ = nullptr;
+    newPriceLabel_ = nullptr;
+    newPriceEdit_ = nullptr;
+    newWeightLabel_ = nullptr;
+    newWeightEdit_ = nullptr;
+    calculateButton_ = nullptr;
+    clearButton_ = nullptr;
+    resultPriceLabel_ = nullptr;
+    resultTotalLabel_ = nullptr;
+    historyList_ = nullptr;
+}
+
+void CalculatorWindow::releaseFonts() {
+    if (titleFont_) {
+        DeleteObject(titleFont_);
+        titleFont_ = nullptr;
+    }
+    if (bodyFont_) {
+        DeleteObject(bodyFont_);
+        bodyFont_ = nullptr;
+    }
+    if (monoFont_) {
+        DeleteObject(monoFont_);
+        monoFont_ = nullptr;
+    }
 }
 
 double CalculatorWindow::parseEditDouble(HWND edit, bool& ok) const {
@@ -301,7 +368,7 @@ void CalculatorWindow::calculate() {
     const double newWeight = parseEditDouble(newWeightEdit_, okNewWeight);
 
     if (!(okOldPrice && okOldWeight && okNewPrice && okNewWeight)) {
-        setResultText(L"输入非法", L"请输入有效数字");
+        setResultText(L"Invalid input", L"Please enter valid numbers");
         return;
     }
 
@@ -310,8 +377,8 @@ void CalculatorWindow::calculate() {
 
         wchar_t priceBuffer[64]{};
         wchar_t totalBuffer[64]{};
-        swprintf_s(priceBuffer, L"均价: %.2f", calculation.averagePrice);
-        swprintf_s(totalBuffer, L"总持有量: %.2f 克", calculation.totalWeight);
+        swprintf_s(priceBuffer, L"Average: %.2f", calculation.averagePrice);
+        swprintf_s(totalBuffer, L"Total weight: %.2f", calculation.totalWeight);
         setResultText(priceBuffer, totalBuffer);
 
         auto history = settingsStore_.loadCalculatorHistory();
@@ -322,7 +389,7 @@ void CalculatorWindow::calculate() {
         settingsStore_.saveCalculatorHistory(history);
         renderHistory(history);
     } catch (const std::exception&) {
-        setResultText(L"计算失败", L"总重量必须大于 0");
+        setResultText(L"Calculation failed", L"Total weight must be greater than 0");
     }
 }
 
@@ -331,7 +398,7 @@ void CalculatorWindow::clearInputs() {
     setControlText(oldWeightEdit_, L"");
     setControlText(newPriceEdit_, L"");
     setControlText(newWeightEdit_, L"");
-    setResultText(L"均价: --", L"总持有量: -- 克");
+    setResultText(L"Average: --", L"Total weight: --");
 }
 
 void CalculatorWindow::loadHistory() {
@@ -339,6 +406,10 @@ void CalculatorWindow::loadHistory() {
 }
 
 void CalculatorWindow::renderHistory(const std::vector<std::wstring>& history) {
+    if (!historyList_) {
+        return;
+    }
+
     SendMessageW(historyList_, LB_RESETCONTENT, 0, 0);
     for (const auto& entry : history) {
         SendMessageW(historyList_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(entry.c_str()));

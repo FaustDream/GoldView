@@ -1,5 +1,7 @@
 #include "taskbar_host.h"
 
+#include <algorithm>
+
 #include "theme.h"
 
 namespace goldview {
@@ -22,7 +24,7 @@ bool TaskbarHost::create(HINSTANCE instanceHandle) {
     windowHandle_ = CreateWindowExW(
         WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED,
         kTaskbarHostClassName,
-        L"GoldView 任务栏左侧模式",
+        L"GoldView",
         WS_POPUP,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -42,6 +44,9 @@ bool TaskbarHost::create(HINSTANCE instanceHandle) {
 
 void TaskbarHost::show() {
     ShowWindow(windowHandle_, SW_SHOWNOACTIVATE);
+    SetWindowPos(windowHandle_, HWND_TOP, 0, 0, 0, 0,
+        SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    RedrawWindow(windowHandle_, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
     UpdateWindow(windowHandle_);
 }
 
@@ -49,7 +54,8 @@ void TaskbarHost::hide() {
     ShowWindow(windowHandle_, SW_HIDE);
 }
 
-void TaskbarHost::updateContent(const PriceSnapshot& snapshot, const DisplaySettings&) {
+void TaskbarHost::updateContent(const PriceSnapshot& snapshot, const DisplaySettings& settings) {
+    settings_ = settings;
     if (snapshot.currentPrice > 0.0) {
         wchar_t buffer[64]{};
         swprintf_s(buffer, L"%.2f", snapshot.currentPrice);
@@ -98,8 +104,8 @@ bool TaskbarHost::attachToTaskbarContainer(HWND parent) {
 
     parentHandle_ = parent;
     embeddedInTaskbar_ = true;
-    SetWindowPos(windowHandle_, nullptr, 0, 0, 0, 0,
-        SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    SetWindowPos(windowHandle_, HWND_TOP, 0, 0, 0, 0,
+        SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
     return true;
 }
 
@@ -146,8 +152,9 @@ void TaskbarHost::applyBoundsInParent(const RECT& rect) {
     bounds_ = rect;
     const int width = rect.right - rect.left;
     const int height = rect.bottom - rect.top;
-    SetWindowPos(windowHandle_, nullptr, rect.left, rect.top, width, height,
+    SetWindowPos(windowHandle_, HWND_TOP, rect.left, rect.top, width, height,
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    RedrawWindow(windowHandle_, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 LRESULT CALLBACK TaskbarHost::windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -172,24 +179,65 @@ LRESULT TaskbarHost::handleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
     }
 }
 
+HFONT TaskbarHost::createDisplayFont() const {
+    const int clampedFontSize = (std::clamp)(settings_.fontSize, 14, 32);
+    return CreateFontW(
+        -clampedFontSize,
+        0,
+        0,
+        0,
+        FW_BOLD,
+        FALSE,
+        FALSE,
+        FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY,
+        DEFAULT_PITCH | FF_DONTCARE,
+        settings_.fontName.empty() ? theme::kMonoFont : settings_.fontName.c_str());
+}
+
 void TaskbarHost::paint() {
     PAINTSTRUCT paintStruct{};
     const auto deviceContext = BeginPaint(windowHandle_, &paintStruct);
     RECT clientRect{};
     GetClientRect(windowHandle_, &clientRect);
 
-    const auto transparentBrush = CreateSolidBrush(kTransparentKey);
-    FillRect(deviceContext, &clientRect, transparentBrush);
-    DeleteObject(transparentBrush);
+    if (settings_.backgroundTransparent) {
+        const auto transparentBrush = CreateSolidBrush(kTransparentKey);
+        FillRect(deviceContext, &clientRect, transparentBrush);
+        DeleteObject(transparentBrush);
+    } else {
+        const auto backgroundBrush = CreateSolidBrush(settings_.backgroundColor);
+        FillRect(deviceContext, &clientRect, backgroundBrush);
+        DeleteObject(backgroundBrush);
+    }
 
     SetBkMode(deviceContext, TRANSPARENT);
-    SetTextColor(deviceContext, theme::kGold);
+    SetTextColor(deviceContext, settings_.textColor);
 
-    HFONT largeFont = theme::createMonoFont(20, FW_BOLD);
+    HFONT largeFont = createDisplayFont();
     const auto oldFont = SelectObject(deviceContext, largeFont);
 
     RECT priceRect = clientRect;
-    DrawTextW(deviceContext, priceText_.c_str(), -1, &priceRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    InflateRect(&priceRect, -6, -2);
+    std::wstring renderedText = priceText_;
+    if (!settings_.horizontalLayout) {
+        const auto separator = renderedText.find(L'.');
+        if (separator != std::wstring::npos) {
+            renderedText.insert(separator, L"\n");
+        }
+    }
+
+    UINT flags = DT_VCENTER | DT_NOPREFIX;
+    if (settings_.horizontalLayout) {
+        flags |= DT_SINGLELINE;
+    } else {
+        flags |= DT_WORDBREAK;
+    }
+    flags |= settings_.textAlignment == TextAlignment::Left ? DT_LEFT : DT_CENTER;
+    DrawTextW(deviceContext, renderedText.c_str(), -1, &priceRect, flags);
 
     SelectObject(deviceContext, oldFont);
     DeleteObject(largeFont);

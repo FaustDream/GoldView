@@ -6,9 +6,9 @@
 
 #include "average_service.h"
 #include "calculator_window.h"
-#include "floating_host.h"
 #include "models.h"
 #include "price_service.h"
+#include "settings_window.h"
 #include "settings_store.h"
 #include "taskbar_anchor_resolver.h"
 #include "taskbar_host.h"
@@ -38,9 +38,10 @@ private:
     void disableTaskbarRecoveryTimer();
     void resetTaskbarModeState();
     void applySnapshot(const PriceSnapshot& snapshot);
-    void toggleMode(DisplayMode mode);
-    void setRefreshInterval(int intervalMs);
     void showCalculatorWindow();
+    void showSettingsWindow();
+    void applySettings(const DisplaySettings& settings);
+    void refreshSettingsWindow();
 
     static LRESULT CALLBACK hiddenWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -65,8 +66,8 @@ private:
     TaskbarAnchorResolver anchorResolver_;
     TaskbarSlotController slotController_;
     std::unique_ptr<TaskbarHost> taskbarHost_;
-    std::unique_ptr<FloatingHost> floatingHost_;
     std::unique_ptr<CalculatorWindow> calculatorWindow_;
+    std::unique_ptr<SettingsWindow> settingsWindow_;
     HostWindow* activeHost_ = nullptr;
 };
 
