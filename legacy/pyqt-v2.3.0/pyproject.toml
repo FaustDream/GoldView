@@ -19,3 +19,4 @@ dependencies = [
 
 [tool.setuptools]
 py-modules = ["gold_view", "calculator"]
+packages = ["core", "shell"]
