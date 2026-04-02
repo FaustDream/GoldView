@@ -55,10 +55,12 @@ private:
     HWND clearButton_ = nullptr;
     HWND resultPriceLabel_ = nullptr;
     HWND resultTotalLabel_ = nullptr;
+    HWND historyTitleLabel_ = nullptr;
     HWND historyList_ = nullptr;
     HFONT titleFont_ = nullptr;
     HFONT bodyFont_ = nullptr;
     HFONT monoFont_ = nullptr;
+    std::vector<std::wstring> history_;
 };
 
 }  // namespace goldview

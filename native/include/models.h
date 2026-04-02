@@ -8,11 +8,17 @@
 
 namespace goldview {
 
-enum class PriceProviderKind {
-    Auto,
-    GoldApi,
+enum class QuoteSourceKind {
     Sina,
     Xwteam,
+    GoldApi,
+};
+
+enum class QuoteSourceTransport {
+    Xhr,
+    Api,
+    Ws,
+    Html,
 };
 
 enum class TextAlignment {
@@ -20,18 +26,59 @@ enum class TextAlignment {
     Center,
 };
 
-inline const wchar_t* priceProviderLabel(PriceProviderKind provider) {
-    switch (provider) {
-    case PriceProviderKind::Auto:
-        return L"自动调度";
-    case PriceProviderKind::GoldApi:
-        return L"Gold API";
-    case PriceProviderKind::Sina:
+enum class RuntimeLogLevel {
+    Info,
+    Warn,
+    Error,
+};
+
+inline const wchar_t* quoteSourceLabel(QuoteSourceKind source) {
+    switch (source) {
+    case QuoteSourceKind::Sina:
         return L"新浪 hf_XAU";
-    case PriceProviderKind::Xwteam:
+    case QuoteSourceKind::Xwteam:
         return L"XWTeam GJ_Au";
+    case QuoteSourceKind::GoldApi:
     default:
-        return L"未知来源";
+        return L"Gold API";
+    }
+}
+
+inline const wchar_t* quoteSourceKey(QuoteSourceKind source) {
+    switch (source) {
+    case QuoteSourceKind::Sina:
+        return L"sina";
+    case QuoteSourceKind::Xwteam:
+        return L"xwteam";
+    case QuoteSourceKind::GoldApi:
+    default:
+        return L"gold-api";
+    }
+}
+
+inline const wchar_t* transportLabel(QuoteSourceTransport transport) {
+    switch (transport) {
+    case QuoteSourceTransport::Xhr:
+        return L"XHR";
+    case QuoteSourceTransport::Ws:
+        return L"WebSocket";
+    case QuoteSourceTransport::Html:
+        return L"HTML";
+    case QuoteSourceTransport::Api:
+    default:
+        return L"API";
+    }
+}
+
+inline const wchar_t* runtimeLogLevelLabel(RuntimeLogLevel level) {
+    switch (level) {
+    case RuntimeLogLevel::Warn:
+        return L"WARN";
+    case RuntimeLogLevel::Error:
+        return L"ERROR";
+    case RuntimeLogLevel::Info:
+    default:
+        return L"INFO";
     }
 }
 
@@ -42,11 +89,10 @@ struct PriceSnapshot {
     std::wstring source;
     std::uint64_t updatedAt = 0;
     std::uint64_t sourceTimestamp = 0;
+    bool delayed = false;
 };
 
 struct DisplaySettings {
-    bool autoSourceSelection = true;
-    PriceProviderKind preferredProvider = PriceProviderKind::GoldApi;
     std::wstring fontName = L"Consolas";
     int fontSize = 20;
     COLORREF textColor = RGB(241, 196, 15);
@@ -56,52 +102,95 @@ struct DisplaySettings {
     bool horizontalLayout = true;
 };
 
-struct ProviderStats {
-    PriceProviderKind provider{PriceProviderKind::GoldApi};
-    int successCount{0};
-    int errorCount{0};
-    int changeCount{0};
-    int consecutiveFailures{0};
-    int lastLatencyMs{0};
-    std::uint64_t lastResponseAt{0};
-    std::uint64_t lastSuccessAt{0};
-    std::uint64_t lastChangeAt{0};
-    double lastValue{0.0};
+struct RuntimeSettings {
+    bool autoRefreshEnabled = true;
+    bool autoSwitchSource = true;
+    QuoteSourceKind preferredSource = QuoteSourceKind::Sina;
+    int successRateThreshold = 95;
+    int latencyThresholdMs = 500;
+    int recentOutputLimit = 50;
+    int uiRefreshIntervalMs = 200;
+    int activeRequestIntervalMs = 1000;
+    int standbyRequestIntervalMs = 15000;
+    int fallbackApiIntervalMs = 5000;
+    int healthWindowSize = 20;
+    int logLimit = 300;
+};
+
+struct QuoteSourceConfig {
+    QuoteSourceKind kind = QuoteSourceKind::Sina;
+    QuoteSourceTransport transport = QuoteSourceTransport::Xhr;
+    bool enabled = true;
+    int priority = 1;
+    int weight = 100;
+    std::wstring apiKey;
+};
+
+struct AppSettings {
+    RuntimeSettings runtime;
+    DisplaySettings display;
+    std::vector<QuoteSourceConfig> sources;
+};
+
+inline AppSettings defaultAppSettings() {
+    AppSettings settings{};
+    settings.sources = {
+        QuoteSourceConfig{QuoteSourceKind::Sina, QuoteSourceTransport::Xhr, true, 1, 100, L""},
+        QuoteSourceConfig{QuoteSourceKind::Xwteam, QuoteSourceTransport::Xhr, true, 2, 90, L""},
+        QuoteSourceConfig{QuoteSourceKind::GoldApi, QuoteSourceTransport::Api, true, 3, 80, L""},
+    };
+    return settings;
+}
+
+struct SourceHealthSnapshot {
+    QuoteSourceKind kind = QuoteSourceKind::Sina;
+    QuoteSourceTransport transport = QuoteSourceTransport::Xhr;
+    bool enabled = true;
+    bool authReady = true;
+    bool active = false;
+    int priority = 1;
+    int weight = 100;
+    int requestCount = 0;
+    int successCount = 0;
+    int errorCount = 0;
+    int averageLatencyMs = 0;
+    int lastLatencyMs = 0;
+    std::uint64_t lastRequestAt = 0;
+    std::uint64_t lastSuccessAt = 0;
+    double lastPrice = 0.0;
     std::wstring lastError;
 };
 
-struct BenchmarkSample {
-    PriceProviderKind provider{PriceProviderKind::GoldApi};
-    std::uint64_t sampleTime{0};
-    int responseMs{0};
-    double price{0.0};
-    bool changed{false};
-    std::wstring error;
-    std::uint64_t sourceTimestamp{0};
+struct RuntimeLogEntry {
+    RuntimeLogLevel level = RuntimeLogLevel::Info;
+    std::uint64_t timestamp = 0;
+    std::wstring message;
 };
 
-struct BenchmarkProviderResult {
-    PriceProviderKind provider{PriceProviderKind::GoldApi};
-    int sampleCount{0};
-    int successCount{0};
-    int changeCount{0};
-    int medianLatencyMs{0};
-    double averageChangeIntervalSec{0.0};
-    double lastValue{0.0};
-    std::wstring lastError;
+struct RecentOutputEntry {
+    std::wstring text;
+    std::wstring source;
+    double price = 0.0;
+    std::uint64_t timestamp = 0;
+    bool delayed = false;
 };
 
 struct PriceServiceStatus {
-    int requestIntervalMs{1000};
-    PriceProviderKind activeProvider{PriceProviderKind::GoldApi};
-    PriceProviderKind benchmarkRecommendedProvider{PriceProviderKind::GoldApi};
-    bool benchmarkRunning{false};
-    std::uint64_t lastSuccessfulAt{0};
-    std::uint64_t lastChangedAt{0};
-    std::uint64_t lastSwitchAt{0};
+    bool autoRefreshEnabled = true;
+    bool delayed = false;
+    int requestIntervalMs = 1000;
+    QuoteSourceKind activeSource = QuoteSourceKind::Sina;
+    std::uint64_t lastRequestedAt = 0;
+    std::uint64_t lastSuccessfulAt = 0;
+    std::uint64_t lastSwitchAt = 0;
     std::wstring lastSwitchReason;
-    std::vector<ProviderStats> providerStats;
-    std::vector<BenchmarkProviderResult> benchmarkResults;
+    std::vector<SourceHealthSnapshot> sourceHealth;
+    std::vector<RuntimeLogEntry> logs;
+};
+
+struct RuntimeViewState {
+    PriceServiceStatus status;
+    std::vector<RecentOutputEntry> recentOutputs;
 };
 
 struct TaskbarAnchor {

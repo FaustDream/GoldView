@@ -1,9 +1,9 @@
 #include "settings_window.h"
 
 #include <algorithm>
+#include <array>
 #include <commctrl.h>
 #include <commdlg.h>
-#include <windowsx.h>
 #include <ctime>
 #include <sstream>
 
@@ -12,40 +12,50 @@
 namespace goldview {
 
 namespace {
+
 constexpr wchar_t kSettingsClassName[] = L"GoldViewSettingsWindow";
-constexpr int kWindowWidth = 760;
-constexpr int kWindowHeight = 620;
-constexpr int kIdAutoSource = 201;
-constexpr int kIdPreferredProvider = 202;
-constexpr int kIdBenchmarkButton = 203;
-constexpr int kIdFontCombo = 301;
-constexpr int kIdFontSizeCombo = 302;
-constexpr int kIdTextColorButton = 303;
-constexpr int kIdBackgroundColorButton = 304;
-constexpr int kIdTransparent = 305;
-constexpr int kIdAlignLeft = 306;
-constexpr int kIdAlignCenter = 307;
-constexpr int kIdHorizontalLayout = 308;
-constexpr COLORREF kAppHeader = RGB(31, 41, 55);
-constexpr COLORREF kAppCanvas = RGB(238, 242, 247);
-constexpr COLORREF kCardBorder = RGB(203, 213, 225);
-constexpr COLORREF kMutedText = RGB(71, 85, 105);
-constexpr COLORREF kActiveTabFill = RGB(255, 247, 219);
-constexpr COLORREF kActiveTabBorder = RGB(197, 139, 13);
-constexpr COLORREF kActiveTabText = RGB(124, 84, 0);
-constexpr COLORREF kInactiveTabFill = RGB(248, 250, 252);
-constexpr COLORREF kInactiveTabText = RGB(51, 65, 85);
-constexpr COLORREF kSuccessFill = RGB(238, 246, 242);
-constexpr COLORREF kSuccessBorder = RGB(34, 160, 107);
-constexpr COLORREF kSuccessText = RGB(22, 101, 52);
+constexpr int kWindowWidth = 1120;
+constexpr int kWindowHeight = 860;
+constexpr int kIdTabControl = 180;
+constexpr int kIdAutoRefresh = 201;
+constexpr int kIdAutoSwitch = 202;
+constexpr int kIdPreferredSource = 203;
+constexpr int kIdSuccessThreshold = 204;
+constexpr int kIdLatencyThreshold = 205;
+constexpr int kIdRecentLimit = 206;
+constexpr int kIdSourceEnabledBase = 300;
+constexpr int kIdSourcePriorityBase = 320;
+constexpr int kIdSourceWeightBase = 340;
+constexpr int kIdFontCombo = 401;
+constexpr int kIdFontSizeCombo = 402;
+constexpr int kIdTextColor = 403;
+constexpr int kIdBackgroundColor = 404;
+constexpr int kIdTransparent = 405;
+constexpr int kIdAlignLeft = 406;
+constexpr int kIdAlignCenter = 407;
+constexpr int kIdHorizontalLayout = 408;
+constexpr int kIdSave = 501;
+constexpr int kIdCancel = 502;
+constexpr int kIdClearLogs = 503;
+constexpr COLORREF kWindowFill = RGB(248, 250, 252);
+constexpr COLORREF kInputFill = RGB(255, 255, 255);
+constexpr COLORREF kAccentRed = RGB(220, 38, 38);
+
+const std::array<QuoteSourceKind, 3> kSourceKinds{
+    QuoteSourceKind::Sina,
+    QuoteSourceKind::Xwteam,
+    QuoteSourceKind::GoldApi,
+};
 
 std::wstring formatTimestamp(std::uint64_t value) {
-    if (value == 0) return L"--";
+    if (value == 0) {
+        return L"--";
+    }
     std::time_t timeValue = static_cast<std::time_t>(value);
     std::tm localTime{};
     localtime_s(&localTime, &timeValue);
     wchar_t buffer[64]{};
-    wcsftime(buffer, std::size(buffer), L"%H:%M:%S", &localTime);
+    wcsftime(buffer, static_cast<int>(std::size(buffer)), L"%H:%M:%S", &localTime);
     return buffer;
 }
 
@@ -55,33 +65,18 @@ std::wstring colorToHex(COLORREF color) {
     return buffer;
 }
 
-void fillRoundedRect(HDC dc, const RECT& rect, COLORREF fillColor, COLORREF borderColor, int radius = 12) {
-    HBRUSH brush = CreateSolidBrush(fillColor);
-    HPEN pen = CreatePen(PS_SOLID, 1, borderColor);
-    const auto oldBrush = SelectObject(dc, brush);
-    const auto oldPen = SelectObject(dc, pen);
-    RoundRect(dc, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
-    SelectObject(dc, oldBrush);
-    SelectObject(dc, oldPen);
-    DeleteObject(brush);
-    DeleteObject(pen);
-}
-
-void drawTextLine(HDC dc, const std::wstring& text, RECT rect, UINT format, COLORREF color, HFONT font) {
-    const auto oldFont = SelectObject(dc, font);
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, color);
-    DrawTextW(dc, text.c_str(), -1, &rect, format);
-    SelectObject(dc, oldFont);
-}
-
 HWND createLabel(HWND parent, HINSTANCE instanceHandle, const wchar_t* text, DWORD style = SS_LEFT, int id = 0) {
     return CreateWindowExW(0, L"STATIC", text, WS_CHILD | WS_VISIBLE | style, 0, 0, 0, 0, parent,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), instanceHandle, nullptr);
 }
 
+HWND createGroupBox(HWND parent, HINSTANCE instanceHandle, const wchar_t* text) {
+    return CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | BS_GROUPBOX, 0, 0, 0, 0, parent, nullptr,
+        instanceHandle, nullptr);
+}
+
 HWND createButton(HWND parent, HINSTANCE instanceHandle, const wchar_t* text, int id, DWORD style = BS_PUSHBUTTON) {
-    return CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | style, 0, 0, 0, 0, parent,
+    return CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | style, 0, 0, 0, 0, parent,
         reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), instanceHandle, nullptr);
 }
 
@@ -90,87 +85,155 @@ HWND createCombo(HWND parent, HINSTANCE instanceHandle, int id) {
         0, 0, 0, 0, parent, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), instanceHandle, nullptr);
 }
 
-HWND createReadOnlyEdit(HWND parent, HINSTANCE instanceHandle) {
-    return CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL,
-        0, 0, 0, 0, parent, nullptr, instanceHandle, nullptr);
+HWND createEdit(HWND parent, HINSTANCE instanceHandle, int id, bool readOnly = false, bool multiline = false) {
+    DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL;
+    if (readOnly) {
+        style |= ES_READONLY;
+    }
+    if (multiline) {
+        style = WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | (readOnly ? ES_READONLY : 0);
+    }
+    return CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", style, 0, 0, 0, 0, parent,
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), instanceHandle, nullptr);
 }
 
-PriceProviderKind providerFromComboIndex(int index) {
-    switch (index) {
-    case 1: return PriceProviderKind::Xwteam;
-    case 2: return PriceProviderKind::Sina;
-    default: return PriceProviderKind::GoldApi;
+HBRUSH panelBrush() {
+    static HBRUSH brush = CreateSolidBrush(kWindowFill);
+    return brush;
+}
+
+HBRUSH inputBrush() {
+    static HBRUSH brush = CreateSolidBrush(kInputFill);
+    return brush;
+}
+
+int comboIndexFromSource(QuoteSourceKind kind) {
+    for (size_t index = 0; index < kSourceKinds.size(); ++index) {
+        if (kSourceKinds[index] == kind) {
+            return static_cast<int>(index);
+        }
+    }
+    return 0;
+}
+
+QuoteSourceKind sourceFromComboIndex(int index) {
+    if (index < 0 || index >= static_cast<int>(kSourceKinds.size())) {
+        return QuoteSourceKind::Sina;
+    }
+    return kSourceKinds[static_cast<size_t>(index)];
+}
+
+QuoteSourceConfig* findSourceConfig(AppSettings& settings, QuoteSourceKind kind) {
+    for (auto& source : settings.sources) {
+        if (source.kind == kind) {
+            return &source;
+        }
+    }
+    return nullptr;
+}
+
+const QuoteSourceConfig* findSourceConfig(const AppSettings& settings, QuoteSourceKind kind) {
+    for (const auto& source : settings.sources) {
+        if (source.kind == kind) {
+            return &source;
+        }
+    }
+    return nullptr;
+}
+
+void setEditInt(HWND edit, int value) {
+    wchar_t buffer[32]{};
+    swprintf_s(buffer, L"%d", value);
+    SetWindowTextW(edit, buffer);
+}
+
+int readEditInt(HWND edit, int fallback, int minimum, int maximum) {
+    wchar_t buffer[32]{};
+    GetWindowTextW(edit, buffer, static_cast<int>(std::size(buffer)));
+    try {
+        return (std::clamp)(std::stoi(buffer), minimum, maximum);
+    } catch (...) {
+        return fallback;
     }
 }
 
-int comboIndexFromProvider(PriceProviderKind provider) {
-    switch (provider) {
-    case PriceProviderKind::Xwteam: return 1;
-    case PriceProviderKind::Sina: return 2;
-    default: return 0;
-    }
-}
 }  // namespace
 
 bool SettingsWindow::create(HINSTANCE instanceHandle) {
-    if (windowHandle_) return true;
-    instanceHandle_ = instanceHandle;
+    if (windowHandle_) {
+        return true;
+    }
 
+    instanceHandle_ = instanceHandle;
     WNDCLASSW windowClass{};
     windowClass.lpfnWndProc = SettingsWindow::windowProc;
     windowClass.hInstance = instanceHandle;
     windowClass.lpszClassName = kSettingsClassName;
     windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    windowClass.hbrBackground = CreateSolidBrush(kAppCanvas);
+    windowClass.hbrBackground = panelBrush();
     RegisterClassW(&windowClass);
 
-    windowHandle_ = CreateWindowExW(WS_EX_TOOLWINDOW, kSettingsClassName, L"GoldView 设置",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, 0, 0, kWindowWidth, kWindowHeight,
+    windowHandle_ = CreateWindowExW(0, kSettingsClassName, L"设置",
+        (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_MINIMIZEBOX) | WS_CLIPCHILDREN,
+        CW_USEDEFAULT, CW_USEDEFAULT, kWindowWidth, kWindowHeight,
         nullptr, nullptr, instanceHandle, this);
-    if (!windowHandle_) return false;
+    if (!windowHandle_) {
+        return false;
+    }
 
     createControls();
     applyFonts();
     syncControlsFromSettings();
-    refreshStatusText();
+    refreshRuntimeText();
+    updateWindowTitle();
     centerOnScreen();
     return true;
 }
 
-void SettingsWindow::show() {
-    if (!windowHandle_ && !create(instanceHandle_)) return;
-    centerOnScreen();
-    ShowWindow(windowHandle_, SW_SHOWNORMAL);
-    UpdateWindow(windowHandle_);
-}
-
 void SettingsWindow::focusOrShow() {
-    if (!windowHandle_ && !create(instanceHandle_)) return;
-    centerOnScreen();
-    ShowWindow(windowHandle_, IsIconic(windowHandle_) ? SW_RESTORE : SW_SHOWNORMAL);
+    if (!windowHandle_ && !create(instanceHandle_)) {
+        return;
+    }
+    ShowWindow(windowHandle_, SW_SHOWNORMAL);
     SetForegroundWindow(windowHandle_);
 }
 
 void SettingsWindow::destroy() {
-    if (windowHandle_) DestroyWindow(windowHandle_);
+    if (windowHandle_) {
+        DestroyWindow(windowHandle_);
+    }
 }
 
-bool SettingsWindow::isCreated() const { return windowHandle_ != nullptr; }
-HWND SettingsWindow::hwnd() const { return windowHandle_; }
-
-void SettingsWindow::setSettings(const DisplaySettings& settings) {
-    settings_ = settings;
-    syncControlsFromSettings();
-    if (windowHandle_) InvalidateRect(windowHandle_, nullptr, TRUE);
+bool SettingsWindow::isCreated() const {
+    return windowHandle_ != nullptr;
 }
 
-void SettingsWindow::updateRuntimeStatus(const PriceServiceStatus& status) {
-    status_ = status;
-    refreshStatusText();
+HWND SettingsWindow::hwnd() const {
+    return windowHandle_;
 }
 
-void SettingsWindow::setSettingsChangedCallback(SettingsChangedCallback callback) { settingsChangedCallback_ = std::move(callback); }
-void SettingsWindow::setBenchmarkRequestCallback(BenchmarkRequestCallback callback) { benchmarkRequestCallback_ = std::move(callback); }
+void SettingsWindow::setSettings(const AppSettings& settings) {
+    savedSettings_ = settings;
+    if (!dirty_) {
+        draftSettings_ = settings;
+        if (windowHandle_) {
+            syncControlsFromSettings();
+        }
+    }
+}
+
+void SettingsWindow::updateRuntimeState(const RuntimeViewState& runtimeState) {
+    runtimeState_ = runtimeState;
+    refreshRuntimeText();
+}
+
+void SettingsWindow::setSettingsSavedCallback(SettingsSavedCallback callback) {
+    settingsSavedCallback_ = std::move(callback);
+}
+
+void SettingsWindow::setClearLogsCallback(ClearLogsCallback callback) {
+    clearLogsCallback_ = std::move(callback);
+}
 
 LRESULT CALLBACK SettingsWindow::windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if (message == WM_NCCREATE) {
@@ -188,67 +251,110 @@ LRESULT SettingsWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lParam
     case WM_SIZE:
         layoutControls(LOWORD(lParam), HIWORD(lParam));
         return 0;
-    case WM_COMMAND:
-        if (LOWORD(wParam) == kIdBenchmarkButton && HIWORD(wParam) == BN_CLICKED) {
-            if (benchmarkRequestCallback_) benchmarkRequestCallback_();
+    case WM_KEYDOWN:
+        if (wParam == VK_RETURN) {
+            saveDraft();
             return 0;
         }
-        if (!updatingControls_) {
-            switch (LOWORD(wParam)) {
-            case kIdAutoSource:
-            case kIdPreferredProvider:
-            case kIdFontCombo:
-            case kIdFontSizeCombo:
-            case kIdTransparent:
-            case kIdAlignLeft:
-            case kIdAlignCenter:
-            case kIdHorizontalLayout:
-                applyControlChanges();
-                return 0;
-            case kIdTextColorButton:
-                if (chooseColorFor(settings_.textColor)) {
-                    updateColorButton(textColorButton_, settings_.textColor);
-                    applyControlChanges();
-                }
-                return 0;
-            case kIdBackgroundColorButton:
-                if (chooseColorFor(settings_.backgroundColor)) {
-                    updateColorButton(backgroundColorButton_, settings_.backgroundColor);
-                    applyControlChanges();
-                }
-                return 0;
-            default:
-                break;
+        if (wParam == VK_ESCAPE) {
+            if (confirmDiscardIfNeeded()) {
+                DestroyWindow(windowHandle_);
             }
+            return 0;
         }
         break;
-    case WM_LBUTTONUP: {
-        POINT point{static_cast<LONG>(GET_X_LPARAM(lParam)), static_cast<LONG>(GET_Y_LPARAM(lParam))};
-        int nextTab = activeTab_;
-        if (PtInRect(&dataTabRect_, point)) nextTab = 0;
-        else if (PtInRect(&displayTabRect_, point)) nextTab = 1;
-        if (nextTab != activeTab_) {
-            activeTab_ = nextTab;
-            syncControlsVisibility();
-            InvalidateRect(windowHandle_, nullptr, TRUE);
+    case WM_NOTIFY:
+        if (reinterpret_cast<LPNMHDR>(lParam)->hwndFrom == tabControl_ &&
+            reinterpret_cast<LPNMHDR>(lParam)->code == TCN_SELCHANGE) {
+            activeTab_ = TabCtrl_GetCurSel(tabControl_);
+            showActiveTab();
+            layoutControls(0, 0);
+            return 0;
+        }
+        break;
+    case WM_COMMAND: {
+        const int controlId = LOWORD(wParam);
+        const int notifyCode = HIWORD(wParam);
+        if (controlId == kIdSave && notifyCode == BN_CLICKED) {
+            saveDraft();
+            return 0;
+        }
+        if (controlId == kIdCancel && notifyCode == BN_CLICKED) {
+            cancelDraft();
+            return 0;
+        }
+        if (controlId == kIdClearLogs && notifyCode == BN_CLICKED) {
+            if (clearLogsCallback_) {
+                clearLogsCallback_();
+            }
+            return 0;
+        }
+        if (controlId == kIdTextColor && notifyCode == BN_CLICKED) {
+            if (chooseColorFor(draftSettings_.display.textColor)) {
+                updateColorButton(textColorButton_, draftSettings_.display.textColor);
+                refreshPreviewStyle();
+                markDirty(true);
+            }
+            return 0;
+        }
+        if (controlId == kIdBackgroundColor && notifyCode == BN_CLICKED) {
+            if (chooseColorFor(draftSettings_.display.backgroundColor)) {
+                updateColorButton(backgroundColorButton_, draftSettings_.display.backgroundColor);
+                refreshPreviewStyle();
+                markDirty(true);
+            }
+            return 0;
+        }
+
+        if (!updatingControls_) {
+            const bool sourceControlChange =
+                (controlId >= kIdSourceEnabledBase && controlId < kIdSourceEnabledBase + 3) ||
+                (controlId >= kIdSourcePriorityBase && controlId < kIdSourcePriorityBase + 3) ||
+                (controlId >= kIdSourceWeightBase && controlId < kIdSourceWeightBase + 3);
+            const bool generalChange =
+                controlId == kIdAutoRefresh || controlId == kIdAutoSwitch || controlId == kIdPreferredSource ||
+                controlId == kIdSuccessThreshold || controlId == kIdLatencyThreshold || controlId == kIdRecentLimit ||
+                controlId == kIdFontCombo || controlId == kIdFontSizeCombo || controlId == kIdTransparent ||
+                controlId == kIdAlignLeft || controlId == kIdAlignCenter || controlId == kIdHorizontalLayout;
+            if (sourceControlChange || generalChange) {
+                pullDraftFromControls();
+                refreshPreviewStyle();
+                markDirty(true);
+            }
         }
         return 0;
     }
     case WM_CLOSE:
-        DestroyWindow(windowHandle_);
+        if (confirmDiscardIfNeeded()) {
+            DestroyWindow(windowHandle_);
+        }
         return 0;
     case WM_DESTROY:
         releaseHandles();
         return 0;
     case WM_CTLCOLORSTATIC: {
         HDC dc = reinterpret_cast<HDC>(wParam);
+        HWND control = reinterpret_cast<HWND>(lParam);
+        if (control == latestOutputValue_) {
+            SetBkMode(dc, TRANSPARENT);
+            SetTextColor(dc, kAccentRed);
+            return reinterpret_cast<LRESULT>(panelBrush());
+        }
+        if (control == previewBox_) {
+            SetBkColor(dc, draftSettings_.display.backgroundTransparent ? kWindowFill : draftSettings_.display.backgroundColor);
+            SetTextColor(dc, draftSettings_.display.textColor);
+            return reinterpret_cast<LRESULT>(previewBrush());
+        }
         SetBkMode(dc, TRANSPARENT);
         SetTextColor(dc, theme::kTextPrimary);
-        return reinterpret_cast<LRESULT>(GetStockObject(NULL_BRUSH));
+        return reinterpret_cast<LRESULT>(panelBrush());
     }
-    case WM_PAINT:
-        paint();
-        return 0;
+    case WM_CTLCOLOREDIT: {
+        HDC dc = reinterpret_cast<HDC>(wParam);
+        SetBkColor(dc, kInputFill);
+        SetTextColor(dc, theme::kTextPrimary);
+        return reinterpret_cast<LRESULT>(inputBrush());
+    }
     default:
         break;
     }
@@ -256,298 +362,400 @@ LRESULT SettingsWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lParam
 }
 
 void SettingsWindow::createControls() {
-    dataPageControls_.clear();
-    displayPageControls_.clear();
+    tabControl_ = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP,
+        0, 0, 0, 0, windowHandle_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kIdTabControl)), instanceHandle_, nullptr);
+    TCITEMW item{};
+    item.mask = TCIF_TEXT;
+    const std::array<const wchar_t*, 5> tabTitles{L"实施状态", L"数据源控制", L"数据流输出", L"显示设置", L"常规设置"};
+    for (int index = 0; index < static_cast<int>(tabTitles.size()); ++index) {
+        item.pszText = const_cast<LPWSTR>(tabTitles[static_cast<size_t>(index)]);
+        TabCtrl_InsertItem(tabControl_, index, &item);
+    }
 
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"自动切换"));
-    autoSourceCheck_ = createButton(windowHandle_, instanceHandle_, L"启用自动切换数据源", kIdAutoSource, BS_AUTOCHECKBOX);
-    dataPageControls_.push_back(autoSourceCheck_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"首选数据源"));
-    preferredProviderCombo_ = createCombo(windowHandle_, instanceHandle_, kIdPreferredProvider);
-    SendMessageW(preferredProviderCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Gold API"));
-    SendMessageW(preferredProviderCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"XWTeam GJ_Au"));
-    SendMessageW(preferredProviderCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Sina hf_XAU"));
-    dataPageControls_.push_back(preferredProviderCombo_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"刷新目标"));
-    requestRateLabel_ = createLabel(windowHandle_, instanceHandle_, L"1 秒请求一次，目标 2-3 秒有效更新", SS_LEFTNOWORDWRAP);
-    dataPageControls_.push_back(requestRateLabel_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"当前数据源"));
-    activeProviderValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
-    dataPageControls_.push_back(activeProviderValue_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"最近成功"));
+    statusGroup_ = createGroupBox(windowHandle_, instanceHandle_, L"实施状态");
+    lastSuccessLabel_ = createLabel(windowHandle_, instanceHandle_, L"最近成功时间");
     lastSuccessValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
-    dataPageControls_.push_back(lastSuccessValue_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"最近变价"));
-    lastChangeValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
-    dataPageControls_.push_back(lastChangeValue_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"切换原因"));
-    switchReasonValue_ = createLabel(windowHandle_, instanceHandle_, L"--", SS_LEFT);
-    dataPageControls_.push_back(switchReasonValue_);
-    dataPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"数据统计 / Benchmark"));
-    statsEdit_ = createReadOnlyEdit(windowHandle_, instanceHandle_);
-    dataPageControls_.push_back(statsEdit_);
-    benchmarkButton_ = createButton(windowHandle_, instanceHandle_, L"执行 Benchmark", kIdBenchmarkButton);
-    dataPageControls_.push_back(benchmarkButton_);
+    lastRequestLabel_ = createLabel(windowHandle_, instanceHandle_, L"最近请求时间");
+    lastRequestValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
+    currentSourceLabel_ = createLabel(windowHandle_, instanceHandle_, L"当前数据源状态");
+    currentSourceValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
+    switchReasonLabel_ = createLabel(windowHandle_, instanceHandle_, L"切换原因");
+    switchReasonValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
+    statsLabel_ = createLabel(windowHandle_, instanceHandle_, L"状态统计");
+    statsEdit_ = createEdit(windowHandle_, instanceHandle_, 0, true, true);
+    for (HWND control : {statusGroup_, lastSuccessLabel_, lastSuccessValue_, lastRequestLabel_, lastRequestValue_, currentSourceLabel_,
+             currentSourceValue_, switchReasonLabel_, switchReasonValue_, statsLabel_, statsEdit_}) {
+        registerTabControl(TabPage::Status, control);
+    }
 
-    displayPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"字体"));
+    sourceGroup_ = createGroupBox(windowHandle_, instanceHandle_, L"数据源控制");
+    autoRefreshCheck_ = createButton(windowHandle_, instanceHandle_, L"启用自动功能", kIdAutoRefresh, BS_AUTOCHECKBOX);
+    autoSwitchCheck_ = createButton(windowHandle_, instanceHandle_, L"自动切换数据源", kIdAutoSwitch, BS_AUTOCHECKBOX);
+    preferredSourceLabel_ = createLabel(windowHandle_, instanceHandle_, L"首选数据源");
+    preferredSourceCombo_ = createCombo(windowHandle_, instanceHandle_, kIdPreferredSource);
+    successThresholdLabel_ = createLabel(windowHandle_, instanceHandle_, L"成功率阈值 (%)");
+    successThresholdEdit_ = createEdit(windowHandle_, instanceHandle_, kIdSuccessThreshold);
+    latencyThresholdLabel_ = createLabel(windowHandle_, instanceHandle_, L"延迟阈值 (ms)");
+    latencyThresholdEdit_ = createEdit(windowHandle_, instanceHandle_, kIdLatencyThreshold);
+    recentLimitLabel_ = createLabel(windowHandle_, instanceHandle_, L"最近输出条数");
+    recentLimitEdit_ = createEdit(windowHandle_, instanceHandle_, kIdRecentLimit);
+    for (auto kind : kSourceKinds) {
+        SendMessageW(preferredSourceCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(quoteSourceLabel(kind)));
+    }
+    for (HWND control : {sourceGroup_, autoRefreshCheck_, autoSwitchCheck_, preferredSourceLabel_, preferredSourceCombo_,
+             successThresholdLabel_, successThresholdEdit_, latencyThresholdLabel_, latencyThresholdEdit_, recentLimitLabel_,
+             recentLimitEdit_}) {
+        registerTabControl(TabPage::Source, control);
+    }
+    for (size_t index = 0; index < sourceRows_.size(); ++index) {
+        auto& row = sourceRows_[index];
+        row.kind = kSourceKinds[index];
+        row.enabledCheck = createButton(windowHandle_, instanceHandle_, L"", kIdSourceEnabledBase + static_cast<int>(index), BS_AUTOCHECKBOX);
+        row.label = createLabel(windowHandle_, instanceHandle_, quoteSourceLabel(row.kind));
+        row.transportValue = createLabel(windowHandle_, instanceHandle_,
+            transportLabel(row.kind == QuoteSourceKind::GoldApi ? QuoteSourceTransport::Api : QuoteSourceTransport::Xhr));
+        row.priorityLabel = createLabel(windowHandle_, instanceHandle_, L"优先级");
+        row.priorityEdit = createEdit(windowHandle_, instanceHandle_, kIdSourcePriorityBase + static_cast<int>(index));
+        row.weightLabel = createLabel(windowHandle_, instanceHandle_, L"权重");
+        row.weightEdit = createEdit(windowHandle_, instanceHandle_, kIdSourceWeightBase + static_cast<int>(index));
+        for (HWND control : {row.enabledCheck, row.label, row.transportValue, row.priorityLabel, row.priorityEdit, row.weightLabel, row.weightEdit}) {
+            registerTabControl(TabPage::Source, control);
+        }
+    }
+
+    outputGroup_ = createGroupBox(windowHandle_, instanceHandle_, L"数据流输出");
+    latestOutputLabel_ = createLabel(windowHandle_, instanceHandle_, L"当前最新一条");
+    latestOutputValue_ = createLabel(windowHandle_, instanceHandle_, L"--");
+    recentOutputsLabel_ = createLabel(windowHandle_, instanceHandle_, L"最近输出列表");
+    recentOutputsEdit_ = createEdit(windowHandle_, instanceHandle_, 0, true, true);
+    for (HWND control : {outputGroup_, latestOutputLabel_, latestOutputValue_, recentOutputsLabel_, recentOutputsEdit_}) {
+        registerTabControl(TabPage::Output, control);
+    }
+
+    displayGroup_ = createGroupBox(windowHandle_, instanceHandle_, L"显示设置");
+    fontLabel_ = createLabel(windowHandle_, instanceHandle_, L"字体");
     fontCombo_ = createCombo(windowHandle_, instanceHandle_, kIdFontCombo);
-    SendMessageW(fontCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Consolas"));
-    SendMessageW(fontCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Segoe UI"));
-    SendMessageW(fontCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Microsoft YaHei UI"));
-    displayPageControls_.push_back(fontCombo_);
-    displayPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"字号"));
+    fontSizeLabel_ = createLabel(windowHandle_, instanceHandle_, L"字号");
     fontSizeCombo_ = createCombo(windowHandle_, instanceHandle_, kIdFontSizeCombo);
+    textColorLabel_ = createLabel(windowHandle_, instanceHandle_, L"文字颜色");
+    textColorButton_ = createButton(windowHandle_, instanceHandle_, L"", kIdTextColor);
+    backgroundColorLabel_ = createLabel(windowHandle_, instanceHandle_, L"背景颜色");
+    backgroundColorButton_ = createButton(windowHandle_, instanceHandle_, L"", kIdBackgroundColor);
+    transparentCheck_ = createButton(windowHandle_, instanceHandle_, L"透明背景", kIdTransparent, BS_AUTOCHECKBOX);
+    alignLabel_ = createLabel(windowHandle_, instanceHandle_, L"对齐方式");
+    alignLeftRadio_ = createButton(windowHandle_, instanceHandle_, L"左对齐", kIdAlignLeft, BS_AUTORADIOBUTTON);
+    alignCenterRadio_ = createButton(windowHandle_, instanceHandle_, L"居中对齐", kIdAlignCenter, BS_AUTORADIOBUTTON);
+    horizontalLayoutCheck_ = createButton(windowHandle_, instanceHandle_, L"水平排布", kIdHorizontalLayout, BS_AUTOCHECKBOX);
+    previewLabel_ = createLabel(windowHandle_, instanceHandle_, L"任务栏预览");
+    previewBox_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_CENTER | SS_CENTERIMAGE,
+        0, 0, 0, 0, windowHandle_, nullptr, instanceHandle_, nullptr);
     for (const wchar_t* size : {L"14", L"16", L"18", L"20", L"22", L"24", L"28", L"32"}) {
         SendMessageW(fontSizeCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(size));
     }
-    displayPageControls_.push_back(fontSizeCombo_);
-    displayPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"文字颜色"));
-    textColorButton_ = createButton(windowHandle_, instanceHandle_, L"", kIdTextColorButton);
-    displayPageControls_.push_back(textColorButton_);
-    displayPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"背景颜色"));
-    backgroundColorButton_ = createButton(windowHandle_, instanceHandle_, L"", kIdBackgroundColorButton);
-    displayPageControls_.push_back(backgroundColorButton_);
-    transparentCheck_ = createButton(windowHandle_, instanceHandle_, L"透明背景", kIdTransparent, BS_AUTOCHECKBOX);
-    displayPageControls_.push_back(transparentCheck_);
-    displayPageControls_.push_back(createLabel(windowHandle_, instanceHandle_, L"文字对齐"));
-    alignLeftRadio_ = createButton(windowHandle_, instanceHandle_, L"左对齐", kIdAlignLeft, BS_AUTORADIOBUTTON);
-    alignCenterRadio_ = createButton(windowHandle_, instanceHandle_, L"居中对齐", kIdAlignCenter, BS_AUTORADIOBUTTON);
-    displayPageControls_.push_back(alignLeftRadio_);
-    displayPageControls_.push_back(alignCenterRadio_);
-    horizontalLayoutCheck_ = createButton(windowHandle_, instanceHandle_, L"水平排列", kIdHorizontalLayout, BS_AUTOCHECKBOX);
-    displayPageControls_.push_back(horizontalLayoutCheck_);
+    for (const wchar_t* font : {L"Consolas", L"Segoe UI", L"Microsoft YaHei UI"}) {
+        SendMessageW(fontCombo_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(font));
+    }
+    for (HWND control : {displayGroup_, fontLabel_, fontCombo_, fontSizeLabel_, fontSizeCombo_, textColorLabel_, textColorButton_,
+             backgroundColorLabel_, backgroundColorButton_, transparentCheck_, alignLabel_, alignLeftRadio_,
+             alignCenterRadio_, horizontalLayoutCheck_, previewLabel_, previewBox_}) {
+        registerTabControl(TabPage::Display, control);
+    }
 
+    generalGroup_ = createGroupBox(windowHandle_, instanceHandle_, L"常规设置");
+    generalPlaceholder_ = createLabel(windowHandle_, instanceHandle_, L"暂未提供设置项。", SS_CENTER);
+    registerTabControl(TabPage::General, generalGroup_);
+    registerTabControl(TabPage::General, generalPlaceholder_);
+
+    saveButton_ = createButton(windowHandle_, instanceHandle_, L"保存设置", kIdSave);
+    cancelButton_ = createButton(windowHandle_, instanceHandle_, L"取消设置", kIdCancel);
+    clearLogsButton_ = createButton(windowHandle_, instanceHandle_, L"清空日志", kIdClearLogs);
+
+    showActiveTab();
     layoutControls(kWindowWidth, kWindowHeight);
-    syncControlsVisibility();
 }
 
 void SettingsWindow::layoutControls(int width, int height) {
-    const int outerMargin = 24;
-    cardRect_ = RECT{outerMargin, outerMargin, width - outerMargin, height - outerMargin};
-    const int headerHeight = 58;
-    dataTabRect_ = RECT{cardRect_.left + 28, cardRect_.top + headerHeight + 24, cardRect_.left + 182, cardRect_.top + headerHeight + 64};
-    displayTabRect_ = RECT{dataTabRect_.right + 18, dataTabRect_.top, dataTabRect_.right + 164, dataTabRect_.bottom};
-
-    const int contentLeft = cardRect_.left + 36;
-    const int contentTop = dataTabRect_.bottom + 28;
-    const int labelWidth = 170;
-    const int fieldLeft = contentLeft + labelWidth + 18;
-    const int fieldWidth = cardRect_.right - fieldLeft - 36;
-    const int rowHeight = 30;
-    const int rowGap = 18;
-
-    int top = contentTop;
-    auto placeRow = [&](HWND label, HWND control, int controlHeight) {
-        MoveWindow(label, contentLeft, top + 6, labelWidth, 22, TRUE);
-        MoveWindow(control, fieldLeft, top, fieldWidth, controlHeight, TRUE);
-        top += controlHeight + rowGap;
-    };
-    placeRow(dataPageControls_[0], autoSourceCheck_, 34);
-    placeRow(dataPageControls_[2], preferredProviderCombo_, 240);
-    placeRow(dataPageControls_[4], requestRateLabel_, 32);
-    placeRow(dataPageControls_[6], activeProviderValue_, 28);
-    placeRow(dataPageControls_[8], lastSuccessValue_, 28);
-    placeRow(dataPageControls_[10], lastChangeValue_, 28);
-    placeRow(dataPageControls_[12], switchReasonValue_, 48);
-    MoveWindow(dataPageControls_[14], contentLeft, top + 6, labelWidth, 22, TRUE);
-    MoveWindow(statsEdit_, fieldLeft, top, fieldWidth, 170, TRUE);
-    top += 188;
-    MoveWindow(benchmarkButton_, fieldLeft, top, 210, 34, TRUE);
-
-    top = contentTop;
-    const int displayFieldWidth = 220;
-    auto placeDisplayRow = [&](HWND label, HWND control, int controlHeight) {
-        MoveWindow(label, contentLeft, top + 6, labelWidth, 22, TRUE);
-        MoveWindow(control, fieldLeft, top, displayFieldWidth, controlHeight, TRUE);
-        top += controlHeight + rowGap;
-    };
-    placeDisplayRow(displayPageControls_[0], fontCombo_, 240);
-    placeDisplayRow(displayPageControls_[2], fontSizeCombo_, 240);
-    placeDisplayRow(displayPageControls_[4], textColorButton_, 32);
-    placeDisplayRow(displayPageControls_[6], backgroundColorButton_, 32);
-    MoveWindow(transparentCheck_, fieldLeft, top, 180, 24, TRUE);
-    top += 40;
-    MoveWindow(displayPageControls_[9], contentLeft, top + 3, labelWidth, 22, TRUE);
-    MoveWindow(alignLeftRadio_, fieldLeft, top, 110, 24, TRUE);
-    MoveWindow(alignCenterRadio_, fieldLeft + 124, top, 110, 24, TRUE);
-    top += 40;
-    MoveWindow(horizontalLayoutCheck_, fieldLeft, top, 180, 24, TRUE);
-
-    previewRect_ = RECT{fieldLeft + displayFieldWidth + 34, contentTop + 26, cardRect_.right - 42, contentTop + 110};
-    previewSummaryRect_ = RECT{previewRect_.left, previewRect_.bottom + 24, previewRect_.right, previewRect_.bottom + 210};
-    syncControlsVisibility();
-}
-
-void SettingsWindow::paint() {
-    PAINTSTRUCT paintStruct{};
-    HDC dc = BeginPaint(windowHandle_, &paintStruct);
-    RECT clientRect{};
-    GetClientRect(windowHandle_, &clientRect);
-    HBRUSH canvasBrush = CreateSolidBrush(kAppCanvas);
-    FillRect(dc, &clientRect, canvasBrush);
-    DeleteObject(canvasBrush);
-
-    fillRoundedRect(dc, cardRect_, theme::kPanel, kCardBorder, 20);
-    RECT headerRect{cardRect_.left, cardRect_.top, cardRect_.right, cardRect_.top + 56};
-    fillRoundedRect(dc, headerRect, kAppHeader, kAppHeader, 20);
-    fillRoundedRect(dc, dataTabRect_, activeTab_ == 0 ? kActiveTabFill : kInactiveTabFill, activeTab_ == 0 ? kActiveTabBorder : kCardBorder);
-    fillRoundedRect(dc, displayTabRect_, activeTab_ == 1 ? kActiveTabFill : kInactiveTabFill, activeTab_ == 1 ? kActiveTabBorder : kCardBorder);
-    drawTextLine(dc, L"数据设置", dataTabRect_, DT_CENTER | DT_VCENTER | DT_SINGLELINE, activeTab_ == 0 ? kActiveTabText : kInactiveTabText, bodyFont_);
-    drawTextLine(dc, L"显示设置", displayTabRect_, DT_CENTER | DT_VCENTER | DT_SINGLELINE, activeTab_ == 1 ? kActiveTabText : kInactiveTabText, bodyFont_);
-
-    if (activeTab_ == 1) {
-        RECT previewTitle{previewRect_.left, previewRect_.top - 28, previewRect_.right, previewRect_.top - 2};
-        drawTextLine(dc, L"任务栏预览", previewTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE, theme::kTextPrimary, sectionFont_);
-        const COLORREF previewFill = settings_.backgroundTransparent ? RGB(245, 245, 245) : settings_.backgroundColor;
-        fillRoundedRect(dc, previewRect_, previewFill, kCardBorder, 18);
-
-        HFONT previewFont = CreateFontW(-(std::clamp)(settings_.fontSize + 4, 18, 34), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
-            settings_.fontName.empty() ? theme::kMonoFont : settings_.fontName.c_str());
-        RECT textRect = previewRect_;
-        InflateRect(&textRect, -18, -12);
-        std::wstring previewText = settings_.horizontalLayout ? L"2345.67" : L"2345\n.67";
-        UINT flags = DT_VCENTER | DT_NOPREFIX | (settings_.textAlignment == TextAlignment::Left ? DT_LEFT : DT_CENTER);
-        flags |= settings_.horizontalLayout ? DT_SINGLELINE : DT_WORDBREAK;
-        drawTextLine(dc, previewText, textRect, flags, settings_.textColor, previewFont);
-        DeleteObject(previewFont);
-
-        fillRoundedRect(dc, previewSummaryRect_, RGB(255, 255, 255), kCardBorder, 18);
-        RECT summaryTitle{previewSummaryRect_.left + 20, previewSummaryRect_.top + 16, previewSummaryRect_.right - 20, previewSummaryRect_.top + 42};
-        drawTextLine(dc, L"效果摘要", summaryTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE, theme::kTextPrimary, sectionFont_);
-        RECT summaryLine = summaryTitle;
-        summaryLine.top += 42;
-        summaryLine.bottom = summaryLine.top + 24;
-        for (const std::wstring& line : {std::wstring(L"1 秒请求一次"), std::wstring(L"目标 2-3 秒可见更新"),
-                 std::wstring(L"设置修改立即保存"), std::wstring(L"任务栏样式实时刷新")}) {
-            drawTextLine(dc, line, summaryLine, DT_LEFT | DT_VCENTER | DT_SINGLELINE, kMutedText, bodyFont_);
-            OffsetRect(&summaryLine, 0, 32);
-        }
-    } else {
-        RECT badgeRect{cardRect_.right - 274, dataTabRect_.top, cardRect_.right - 32, dataTabRect_.top + 36};
-        fillRoundedRect(dc, badgeRect, kSuccessFill, kSuccessBorder, 10);
-        drawTextLine(dc, statusSummaryText(), badgeRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE, kSuccessText, bodyFont_);
+    if (!windowHandle_) {
+        return;
     }
-    EndPaint(windowHandle_, &paintStruct);
+    if (width == 0 || height == 0) {
+        RECT clientRect{};
+        GetClientRect(windowHandle_, &clientRect);
+        width = clientRect.right - clientRect.left;
+        height = clientRect.bottom - clientRect.top;
+    }
+
+    const int outer = 16;
+    const int actionHeight = 56;
+    tabRect_ = RECT{outer, outer, width - outer, height - outer * 2 - actionHeight};
+    actionBarRect_ = RECT{outer, height - outer - actionHeight, width - outer, height - outer};
+    MoveWindow(tabControl_, tabRect_.left, tabRect_.top, tabRect_.right - tabRect_.left, tabRect_.bottom - tabRect_.top, TRUE);
+
+    RECT pageRect{};
+    GetClientRect(tabControl_, &pageRect);
+    TabCtrl_AdjustRect(tabControl_, FALSE, &pageRect);
+    MapWindowPoints(tabControl_, windowHandle_, reinterpret_cast<POINT*>(&pageRect), 2);
+    contentRect_ = pageRect;
+
+    const int x = contentRect_.left + 16;
+    const int y = contentRect_.top + 28;
+    const int contentWidth = contentRect_.right - contentRect_.left;
+    const int contentHeight = contentRect_.bottom - contentRect_.top;
+
+    MoveWindow(statusGroup_, contentRect_.left, contentRect_.top, contentWidth, contentHeight, TRUE);
+    MoveWindow(lastSuccessLabel_, x, y, 110, 22, TRUE);
+    MoveWindow(lastSuccessValue_, x + 118, y, 180, 22, TRUE);
+    MoveWindow(lastRequestLabel_, x + 340, y, 110, 22, TRUE);
+    MoveWindow(lastRequestValue_, x + 458, y, 180, 22, TRUE);
+    MoveWindow(currentSourceLabel_, x, y + 40, 110, 22, TRUE);
+    MoveWindow(currentSourceValue_, x + 118, y + 40, 220, 22, TRUE);
+    MoveWindow(switchReasonLabel_, x, y + 78, 110, 22, TRUE);
+    MoveWindow(switchReasonValue_, x + 118, y + 78, contentRect_.right - x - 134, 40, TRUE);
+    MoveWindow(statsLabel_, x, y + 132, 100, 22, TRUE);
+    MoveWindow(statsEdit_, x, y + 160, contentRect_.right - x - 16, contentRect_.bottom - y - 176, TRUE);
+
+    MoveWindow(sourceGroup_, contentRect_.left, contentRect_.top, contentWidth, contentHeight, TRUE);
+    MoveWindow(autoRefreshCheck_, x, y, 160, 24, TRUE);
+    MoveWindow(autoSwitchCheck_, x + 180, y, 180, 24, TRUE);
+    MoveWindow(preferredSourceLabel_, x, y + 40, 100, 22, TRUE);
+    MoveWindow(preferredSourceCombo_, x + 110, y + 38, 180, 220, TRUE);
+    MoveWindow(successThresholdLabel_, x + 330, y + 40, 120, 22, TRUE);
+    MoveWindow(successThresholdEdit_, x + 458, y + 38, 70, 26, TRUE);
+    MoveWindow(latencyThresholdLabel_, x, y + 80, 120, 22, TRUE);
+    MoveWindow(latencyThresholdEdit_, x + 110, y + 78, 70, 26, TRUE);
+    MoveWindow(recentLimitLabel_, x + 220, y + 80, 110, 22, TRUE);
+    MoveWindow(recentLimitEdit_, x + 338, y + 78, 70, 26, TRUE);
+    for (size_t index = 0; index < sourceRows_.size(); ++index) {
+        auto& row = sourceRows_[index];
+        const int rowTop = y + 132 + static_cast<int>(index) * 34;
+        MoveWindow(row.enabledCheck, x, rowTop, 22, 22, TRUE);
+        MoveWindow(row.label, x + 30, rowTop, 140, 22, TRUE);
+        MoveWindow(row.transportValue, x + 180, rowTop, 110, 22, TRUE);
+        MoveWindow(row.priorityLabel, x + 320, rowTop, 52, 22, TRUE);
+        MoveWindow(row.priorityEdit, x + 378, rowTop - 2, 50, 26, TRUE);
+        MoveWindow(row.weightLabel, x + 460, rowTop, 40, 22, TRUE);
+        MoveWindow(row.weightEdit, x + 506, rowTop - 2, 50, 26, TRUE);
+    }
+
+    MoveWindow(outputGroup_, contentRect_.left, contentRect_.top, contentWidth, contentHeight, TRUE);
+    MoveWindow(latestOutputLabel_, x, y, 120, 22, TRUE);
+    MoveWindow(latestOutputValue_, x, y + 30, contentRect_.right - x - 16, 30, TRUE);
+    MoveWindow(recentOutputsLabel_, x, y + 76, 120, 22, TRUE);
+    MoveWindow(recentOutputsEdit_, x, y + 104, contentRect_.right - x - 16, contentRect_.bottom - y - 120, TRUE);
+
+    MoveWindow(displayGroup_, contentRect_.left, contentRect_.top, contentWidth, contentHeight, TRUE);
+    MoveWindow(fontLabel_, x, y, 72, 22, TRUE);
+    MoveWindow(fontCombo_, x + 90, y - 2, 220, 220, TRUE);
+    MoveWindow(fontSizeLabel_, x, y + 38, 72, 22, TRUE);
+    MoveWindow(fontSizeCombo_, x + 90, y + 36, 80, 220, TRUE);
+    MoveWindow(textColorLabel_, x, y + 76, 72, 22, TRUE);
+    MoveWindow(textColorButton_, x + 90, y + 72, 110, 30, TRUE);
+    MoveWindow(backgroundColorLabel_, x, y + 116, 72, 22, TRUE);
+    MoveWindow(backgroundColorButton_, x + 90, y + 112, 110, 30, TRUE);
+    MoveWindow(transparentCheck_, x + 90, y + 154, 120, 24, TRUE);
+    MoveWindow(alignLabel_, x, y + 190, 72, 22, TRUE);
+    MoveWindow(alignLeftRadio_, x + 90, y + 188, 80, 24, TRUE);
+    MoveWindow(alignCenterRadio_, x + 176, y + 188, 90, 24, TRUE);
+    MoveWindow(horizontalLayoutCheck_, x + 90, y + 222, 120, 24, TRUE);
+    MoveWindow(previewLabel_, x + 380, y, 120, 22, TRUE);
+    MoveWindow(previewBox_, x + 380, y + 28, contentRect_.right - x - 396, 140, TRUE);
+
+    MoveWindow(generalGroup_, contentRect_.left, contentRect_.top, contentWidth, contentHeight, TRUE);
+    MoveWindow(generalPlaceholder_, contentRect_.left + 24, contentRect_.top + 56, contentWidth - 48, 28, TRUE);
+
+    MoveWindow(clearLogsButton_, actionBarRect_.left, actionBarRect_.top + 10, 120, 36, TRUE);
+    MoveWindow(cancelButton_, actionBarRect_.right - 264, actionBarRect_.top + 10, 120, 36, TRUE);
+    MoveWindow(saveButton_, actionBarRect_.right - 132, actionBarRect_.top + 10, 120, 36, TRUE);
 }
 
 void SettingsWindow::centerOnScreen() const {
-    if (!windowHandle_) return;
+    if (!windowHandle_) {
+        return;
+    }
     RECT windowRect{};
     GetWindowRect(windowHandle_, &windowRect);
-    const int width = windowRect.right - windowRect.left;
-    const int height = windowRect.bottom - windowRect.top;
     MONITORINFO monitorInfo{};
     monitorInfo.cbSize = sizeof(monitorInfo);
     GetMonitorInfoW(MonitorFromWindow(windowHandle_, MONITOR_DEFAULTTONEAREST), &monitorInfo);
     const RECT& workRect = monitorInfo.rcWork;
+    const int width = windowRect.right - windowRect.left;
+    const int height = windowRect.bottom - windowRect.top;
     const int x = workRect.left + ((workRect.right - workRect.left) - width) / 2;
     const int y = workRect.top + ((workRect.bottom - workRect.top) - height) / 2;
     SetWindowPos(windowHandle_, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
 }
 
 void SettingsWindow::releaseHandles() {
-    auto deleteFont = [](HFONT& font) { if (font) { DeleteObject(font); font = nullptr; } };
-    deleteFont(titleFont_);
-    deleteFont(sectionFont_);
-    deleteFont(bodyFont_);
-    deleteFont(monoFont_);
+    for (HFONT* font : {&sectionFont_, &bodyFont_, &monoFont_, &previewFont_}) {
+        if (*font) {
+            DeleteObject(*font);
+            *font = nullptr;
+        }
+    }
+    if (previewBrush_) {
+        DeleteObject(previewBrush_);
+        previewBrush_ = nullptr;
+    }
+    for (auto& controls : tabControls_) {
+        controls.clear();
+    }
     windowHandle_ = nullptr;
-    autoSourceCheck_ = nullptr;
-    preferredProviderCombo_ = nullptr;
-    requestRateLabel_ = nullptr;
-    activeProviderValue_ = nullptr;
-    lastSuccessValue_ = nullptr;
-    lastChangeValue_ = nullptr;
-    switchReasonValue_ = nullptr;
-    statsEdit_ = nullptr;
-    benchmarkButton_ = nullptr;
-    fontCombo_ = nullptr;
-    fontSizeCombo_ = nullptr;
-    textColorButton_ = nullptr;
-    backgroundColorButton_ = nullptr;
-    transparentCheck_ = nullptr;
-    alignLeftRadio_ = nullptr;
-    alignCenterRadio_ = nullptr;
-    horizontalLayoutCheck_ = nullptr;
-    dataPageControls_.clear();
-    displayPageControls_.clear();
 }
 
 void SettingsWindow::applyFonts() {
-    titleFont_ = theme::createUiFont(22, FW_BOLD);
     sectionFont_ = theme::createUiFont(18, FW_BOLD);
     bodyFont_ = theme::createUiFont(16, FW_NORMAL);
     monoFont_ = theme::createMonoFont(18, FW_BOLD);
+    SendMessageW(tabControl_, WM_SETFONT, reinterpret_cast<WPARAM>(bodyFont_), TRUE);
     EnumChildWindows(windowHandle_, [](HWND hwnd, LPARAM lParam) -> BOOL {
         const auto self = reinterpret_cast<SettingsWindow*>(lParam);
-        SendMessageW(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(self->bodyFont_), TRUE);
+        HFONT font = self->bodyFont_;
+        if (hwnd == self->statsEdit_ || hwnd == self->recentOutputsEdit_ || hwnd == self->latestOutputValue_) {
+            font = self->monoFont_;
+        }
+        SendMessageW(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
         return TRUE;
     }, reinterpret_cast<LPARAM>(this));
+    for (HWND group : {statusGroup_, sourceGroup_, outputGroup_, displayGroup_, generalGroup_}) {
+        SendMessageW(group, WM_SETFONT, reinterpret_cast<WPARAM>(sectionFont_), TRUE);
+    }
+    refreshPreviewStyle();
 }
 
 void SettingsWindow::syncControlsFromSettings() {
-    if (!windowHandle_) return;
+    if (!windowHandle_) {
+        return;
+    }
     updatingControls_ = true;
-    SendMessageW(autoSourceCheck_, BM_SETCHECK, settings_.autoSourceSelection ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(preferredProviderCombo_, CB_SETCURSEL, comboIndexFromProvider(settings_.preferredProvider), 0);
-    const int fontIndex = static_cast<int>(SendMessageW(fontCombo_, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(settings_.fontName.c_str())));
+    SendMessageW(autoRefreshCheck_, BM_SETCHECK, draftSettings_.runtime.autoRefreshEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(autoSwitchCheck_, BM_SETCHECK, draftSettings_.runtime.autoSwitchSource ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(preferredSourceCombo_, CB_SETCURSEL, comboIndexFromSource(draftSettings_.runtime.preferredSource), 0);
+    setEditInt(successThresholdEdit_, draftSettings_.runtime.successRateThreshold);
+    setEditInt(latencyThresholdEdit_, draftSettings_.runtime.latencyThresholdMs);
+    setEditInt(recentLimitEdit_, draftSettings_.runtime.recentOutputLimit);
+    for (auto& row : sourceRows_) {
+        const QuoteSourceConfig* config = findSourceConfig(draftSettings_, row.kind);
+        SendMessageW(row.enabledCheck, BM_SETCHECK, (config && config->enabled) ? BST_CHECKED : BST_UNCHECKED, 0);
+        setEditInt(row.priorityEdit, config ? config->priority : 1);
+        setEditInt(row.weightEdit, config ? config->weight : 100);
+        SetWindowTextW(row.transportValue, transportLabel(config ? config->transport : QuoteSourceTransport::Xhr));
+    }
+    const int fontIndex = static_cast<int>(SendMessageW(fontCombo_, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1),
+        reinterpret_cast<LPARAM>(draftSettings_.display.fontName.c_str())));
     SendMessageW(fontCombo_, CB_SETCURSEL, fontIndex >= 0 ? fontIndex : 0, 0);
-    wchar_t fontSizeBuffer[16]{};
-    swprintf_s(fontSizeBuffer, L"%d", settings_.fontSize);
-    const int fontSizeIndex = static_cast<int>(SendMessageW(fontSizeCombo_, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(fontSizeBuffer)));
+    wchar_t sizeBuffer[16]{};
+    swprintf_s(sizeBuffer, L"%d", draftSettings_.display.fontSize);
+    const int fontSizeIndex = static_cast<int>(SendMessageW(fontSizeCombo_, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1),
+        reinterpret_cast<LPARAM>(sizeBuffer)));
     SendMessageW(fontSizeCombo_, CB_SETCURSEL, fontSizeIndex >= 0 ? fontSizeIndex : 3, 0);
-    updateColorButton(textColorButton_, settings_.textColor);
-    updateColorButton(backgroundColorButton_, settings_.backgroundColor);
-    SendMessageW(transparentCheck_, BM_SETCHECK, settings_.backgroundTransparent ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(alignLeftRadio_, BM_SETCHECK, settings_.textAlignment == TextAlignment::Left ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(alignCenterRadio_, BM_SETCHECK, settings_.textAlignment == TextAlignment::Center ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(horizontalLayoutCheck_, BM_SETCHECK, settings_.horizontalLayout ? BST_CHECKED : BST_UNCHECKED, 0);
-    EnableWindow(backgroundColorButton_, settings_.backgroundTransparent ? FALSE : TRUE);
+    updateColorButton(textColorButton_, draftSettings_.display.textColor);
+    updateColorButton(backgroundColorButton_, draftSettings_.display.backgroundColor);
+    SendMessageW(transparentCheck_, BM_SETCHECK, draftSettings_.display.backgroundTransparent ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(alignLeftRadio_, BM_SETCHECK, draftSettings_.display.textAlignment == TextAlignment::Left ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(alignCenterRadio_, BM_SETCHECK, draftSettings_.display.textAlignment == TextAlignment::Center ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(horizontalLayoutCheck_, BM_SETCHECK, draftSettings_.display.horizontalLayout ? BST_CHECKED : BST_UNCHECKED, 0);
+    EnableWindow(backgroundColorButton_, draftSettings_.display.backgroundTransparent ? FALSE : TRUE);
     updatingControls_ = false;
+    refreshPreviewStyle();
+    refreshRuntimeText();
 }
 
-void SettingsWindow::syncControlsVisibility() {
-    for (HWND control : dataPageControls_) ShowWindow(control, activeTab_ == 0 ? SW_SHOW : SW_HIDE);
-    for (HWND control : displayPageControls_) ShowWindow(control, activeTab_ == 1 ? SW_SHOW : SW_HIDE);
-}
-
-void SettingsWindow::applyControlChanges() {
-    settings_.autoSourceSelection = SendMessageW(autoSourceCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
-    settings_.preferredProvider = providerFromComboIndex(static_cast<int>(SendMessageW(preferredProviderCombo_, CB_GETCURSEL, 0, 0)));
+void SettingsWindow::pullDraftFromControls() {
+    draftSettings_.runtime.autoRefreshEnabled = SendMessageW(autoRefreshCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
+    draftSettings_.runtime.autoSwitchSource = SendMessageW(autoSwitchCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
+    draftSettings_.runtime.preferredSource = sourceFromComboIndex(static_cast<int>(SendMessageW(preferredSourceCombo_, CB_GETCURSEL, 0, 0)));
+    draftSettings_.runtime.successRateThreshold = readEditInt(successThresholdEdit_, draftSettings_.runtime.successRateThreshold, 50, 100);
+    draftSettings_.runtime.latencyThresholdMs = readEditInt(latencyThresholdEdit_, draftSettings_.runtime.latencyThresholdMs, 100, 5000);
+    draftSettings_.runtime.recentOutputLimit = readEditInt(recentLimitEdit_, draftSettings_.runtime.recentOutputLimit, 10, 200);
+    for (auto& row : sourceRows_) {
+        if (QuoteSourceConfig* config = findSourceConfig(draftSettings_, row.kind)) {
+            config->enabled = SendMessageW(row.enabledCheck, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            config->priority = readEditInt(row.priorityEdit, config->priority, 1, 99);
+            config->weight = readEditInt(row.weightEdit, config->weight, 1, 100);
+        }
+    }
     const int fontIndex = static_cast<int>(SendMessageW(fontCombo_, CB_GETCURSEL, 0, 0));
-    wchar_t textBuffer[128]{};
     if (fontIndex >= 0) {
+        wchar_t textBuffer[128]{};
         SendMessageW(fontCombo_, CB_GETLBTEXT, fontIndex, reinterpret_cast<LPARAM>(textBuffer));
-        settings_.fontName = textBuffer;
+        draftSettings_.display.fontName = textBuffer;
     }
     const int sizeIndex = static_cast<int>(SendMessageW(fontSizeCombo_, CB_GETCURSEL, 0, 0));
     if (sizeIndex >= 0) {
-        wchar_t sizeBuffer[32]{};
-        SendMessageW(fontSizeCombo_, CB_GETLBTEXT, sizeIndex, reinterpret_cast<LPARAM>(sizeBuffer));
-        settings_.fontSize = (std::clamp)(_wtoi(sizeBuffer), 14, 32);
+        wchar_t textBuffer[32]{};
+        SendMessageW(fontSizeCombo_, CB_GETLBTEXT, sizeIndex, reinterpret_cast<LPARAM>(textBuffer));
+        draftSettings_.display.fontSize = (std::clamp)(_wtoi(textBuffer), 14, 32);
     }
-    settings_.backgroundTransparent = SendMessageW(transparentCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
-    settings_.textAlignment = SendMessageW(alignLeftRadio_, BM_GETCHECK, 0, 0) == BST_CHECKED ? TextAlignment::Left : TextAlignment::Center;
-    settings_.horizontalLayout = SendMessageW(horizontalLayoutCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
-    EnableWindow(backgroundColorButton_, settings_.backgroundTransparent ? FALSE : TRUE);
-    if (settingsChangedCallback_) settingsChangedCallback_(settings_);
-    InvalidateRect(windowHandle_, nullptr, TRUE);
+    draftSettings_.display.backgroundTransparent = SendMessageW(transparentCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
+    draftSettings_.display.textAlignment =
+        SendMessageW(alignLeftRadio_, BM_GETCHECK, 0, 0) == BST_CHECKED ? TextAlignment::Left : TextAlignment::Center;
+    draftSettings_.display.horizontalLayout = SendMessageW(horizontalLayoutCheck_, BM_GETCHECK, 0, 0) == BST_CHECKED;
+    EnableWindow(backgroundColorButton_, draftSettings_.display.backgroundTransparent ? FALSE : TRUE);
 }
 
-void SettingsWindow::refreshStatusText() {
-    if (!windowHandle_) return;
-    SetWindowTextW(activeProviderValue_, priceProviderLabel(status_.activeProvider));
-    SetWindowTextW(lastSuccessValue_, formatTimestamp(status_.lastSuccessfulAt).c_str());
-    SetWindowTextW(lastChangeValue_, formatTimestamp(status_.lastChangedAt).c_str());
-    SetWindowTextW(switchReasonValue_, status_.lastSwitchReason.empty() ? L"--" : status_.lastSwitchReason.c_str());
-    SetWindowTextW(statsEdit_, statsTableText().c_str());
-    SetWindowTextW(requestRateLabel_, statusSummaryText().c_str());
-    EnableWindow(benchmarkButton_, status_.benchmarkRunning ? FALSE : TRUE);
-    InvalidateRect(windowHandle_, nullptr, TRUE);
+void SettingsWindow::refreshRuntimeText() {
+    if (!windowHandle_) {
+        return;
+    }
+    SetWindowTextW(lastSuccessValue_, formatTimestamp(runtimeState_.status.lastSuccessfulAt).c_str());
+    SetWindowTextW(lastRequestValue_, formatTimestamp(runtimeState_.status.lastRequestedAt).c_str());
+    SetWindowTextW(currentSourceValue_, quoteSourceLabel(runtimeState_.status.activeSource));
+    SetWindowTextW(switchReasonValue_, runtimeState_.status.lastSwitchReason.empty() ? L"--" : runtimeState_.status.lastSwitchReason.c_str());
+    SetWindowTextW(statsEdit_, formatHealthSummary().c_str());
+    if (runtimeState_.recentOutputs.empty()) {
+        SetWindowTextW(latestOutputValue_, L"--");
+        SetWindowTextW(recentOutputsEdit_, L"--");
+    } else {
+        std::wstring latest = runtimeState_.recentOutputs.front().text;
+        if (runtimeState_.status.delayed) {
+            latest += L"  [数据延迟]";
+        }
+        SetWindowTextW(latestOutputValue_, latest.c_str());
+        SetWindowTextW(recentOutputsEdit_, formatRecentOutputs().c_str());
+    }
 }
 
-void SettingsWindow::updateColorButton(HWND button, COLORREF color) const { SetWindowTextW(button, colorToHex(color).c_str()); }
+void SettingsWindow::markDirty(bool dirty) {
+    dirty_ = dirty;
+    updateWindowTitle();
+}
+
+bool SettingsWindow::confirmDiscardIfNeeded() {
+    if (!dirty_) {
+        return true;
+    }
+    const int result = MessageBoxW(windowHandle_, L"当前设置尚未保存。是否先保存更改？", L"未保存的设置", MB_YESNOCANCEL | MB_ICONQUESTION);
+    if (result == IDCANCEL) {
+        return false;
+    }
+    if (result == IDYES) {
+        saveDraft();
+        return !dirty_;
+    }
+    draftSettings_ = savedSettings_;
+    syncControlsFromSettings();
+    markDirty(false);
+    return true;
+}
+
+void SettingsWindow::saveDraft() {
+    pullDraftFromControls();
+    savedSettings_ = draftSettings_;
+    if (settingsSavedCallback_) {
+        settingsSavedCallback_(savedSettings_);
+    }
+    markDirty(false);
+}
+
+void SettingsWindow::cancelDraft() {
+    draftSettings_ = savedSettings_;
+    syncControlsFromSettings();
+    markDirty(false);
+}
+
+void SettingsWindow::updateColorButton(HWND button, COLORREF color) const {
+    SetWindowTextW(button, colorToHex(color).c_str());
+}
 
 bool SettingsWindow::chooseColorFor(COLORREF& color) {
     static COLORREF customColors[16]{};
@@ -557,46 +765,90 @@ bool SettingsWindow::chooseColorFor(COLORREF& color) {
     chooseColor.rgbResult = color;
     chooseColor.lpCustColors = customColors;
     chooseColor.Flags = CC_FULLOPEN | CC_RGBINIT;
-    if (!ChooseColorW(&chooseColor)) return false;
+    if (!ChooseColorW(&chooseColor)) {
+        return false;
+    }
     color = chooseColor.rgbResult;
     return true;
 }
 
-std::wstring SettingsWindow::statusSummaryText() const {
+std::wstring SettingsWindow::formatHealthSummary() const {
     std::wstringstream stream;
-    stream << L"1 秒请求一次，目标 2-3 秒有效更新";
-    if (status_.benchmarkRunning) stream << L" / Benchmark 运行中";
-    else if (!status_.benchmarkResults.empty()) stream << L" / 推荐 " << priceProviderLabel(status_.benchmarkRecommendedProvider);
+    for (const auto& source : runtimeState_.status.sourceHealth) {
+        const int total = source.successCount + source.errorCount;
+        const int successRate = total > 0 ? static_cast<int>((source.successCount * 100.0) / total) : 100;
+        stream << L"["
+               << quoteSourceLabel(source.kind)
+               << (source.active ? L" *" : L"")
+               << L"] 成功率=" << successRate << L"% 平均延迟=" << source.averageLatencyMs << L"ms 最近错误="
+               << (source.lastError.empty() ? L"--" : source.lastError) << L"\r\n";
+    }
+    if (!runtimeState_.status.logs.empty()) {
+        stream << L"\r\n运行日志\r\n";
+        const size_t startIndex = runtimeState_.status.logs.size() > 12 ? runtimeState_.status.logs.size() - 12 : 0;
+        for (size_t index = startIndex; index < runtimeState_.status.logs.size(); ++index) {
+            const auto& log = runtimeState_.status.logs[index];
+            stream << L"[" << runtimeLogLevelLabel(log.level) << L"][" << formatTimestamp(log.timestamp) << L"] " << log.message << L"\r\n";
+        }
+    }
+    const std::wstring text = stream.str();
+    return text.empty() ? L"--" : text;
+}
+
+std::wstring SettingsWindow::formatRecentOutputs() const {
+    if (runtimeState_.recentOutputs.size() <= 1) {
+        return L"--";
+    }
+    std::wstringstream stream;
+    for (size_t index = 1; index < runtimeState_.recentOutputs.size(); ++index) {
+        if (index > 1) {
+            stream << L"\r\n";
+        }
+        stream << runtimeState_.recentOutputs[index].text;
+    }
     return stream.str();
 }
 
-std::wstring SettingsWindow::statsTableText() const {
-    std::wstringstream stream;
-    for (const auto& provider : status_.providerStats) {
-        const int total = provider.successCount + provider.errorCount;
-        const int successPercent = total > 0 ? static_cast<int>((provider.successCount * 100.0) / total) : 0;
-        stream << L"[" << priceProviderLabel(provider.provider) << L"] 成功率=" << successPercent << L"% "
-               << L"延迟=" << provider.lastLatencyMs << L"ms "
-               << L"最近错误=" << (provider.lastError.empty() ? L"--" : provider.lastError) << L"\r\n"
-               << L"最近成功=" << formatTimestamp(provider.lastSuccessAt)
-               << L" 最近变价=" << formatTimestamp(provider.lastChangeAt)
-               << L" 变价次数=" << provider.changeCount
-               << L" 连续失败=" << provider.consecutiveFailures << L"\r\n\r\n";
-    }
-    if (!status_.benchmarkResults.empty()) {
-        stream << L"Benchmark 摘要\r\n";
-        for (const auto& result : status_.benchmarkResults) {
-            stream << L"- " << priceProviderLabel(result.provider)
-                   << L" 样本=" << result.sampleCount
-                   << L" 成功=" << result.successCount
-                   << L" 变价=" << result.changeCount
-                   << L" 中位延迟=" << result.medianLatencyMs << L"ms"
-                   << L" 平均变价间隔=" << result.averageChangeIntervalSec << L"s";
-            if (!result.lastError.empty()) stream << L" 错误=" << result.lastError;
-            stream << L"\r\n";
+void SettingsWindow::registerTabControl(TabPage page, HWND control) {
+    tabControls_[static_cast<size_t>(page)].push_back(control);
+}
+
+void SettingsWindow::showActiveTab() {
+    for (size_t pageIndex = 0; pageIndex < tabControls_.size(); ++pageIndex) {
+        const int showState = static_cast<int>(pageIndex) == activeTab_ ? SW_SHOW : SW_HIDE;
+        for (HWND control : tabControls_[pageIndex]) {
+            ShowWindow(control, showState);
         }
     }
-    return stream.str();
+}
+
+void SettingsWindow::updateWindowTitle() const {
+    if (windowHandle_) {
+        SetWindowTextW(windowHandle_, dirty_ ? L"设置 *" : L"设置");
+    }
+}
+
+void SettingsWindow::refreshPreviewStyle() {
+    if (!windowHandle_ || !previewBox_) {
+        return;
+    }
+    if (previewBrush_) {
+        DeleteObject(previewBrush_);
+    }
+    previewBrush_ = CreateSolidBrush(draftSettings_.display.backgroundTransparent ? kWindowFill : draftSettings_.display.backgroundColor);
+    if (previewFont_) {
+        DeleteObject(previewFont_);
+    }
+    previewFont_ = CreateFontW(-(std::clamp)(draftSettings_.display.fontSize + 4, 18, 34), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
+        draftSettings_.display.fontName.empty() ? theme::kMonoFont : draftSettings_.display.fontName.c_str());
+    SendMessageW(previewBox_, WM_SETFONT, reinterpret_cast<WPARAM>(previewFont_), TRUE);
+    SetWindowTextW(previewBox_, draftSettings_.display.horizontalLayout ? L"2345.67" : L"2345\r\n.67");
+    InvalidateRect(previewBox_, nullptr, TRUE);
+}
+
+HBRUSH SettingsWindow::previewBrush() const {
+    return previewBrush_ ? previewBrush_ : panelBrush();
 }
 
 }  // namespace goldview

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <deque>
 #include <memory>
 
 #include "average_service.h"
@@ -36,11 +37,16 @@ private:
     TaskbarRefreshResult refreshTaskbarLayout();
     void enableTaskbarRecoveryTimer();
     void disableTaskbarRecoveryTimer();
+    void enableUiRefreshTimer();
+    void disableUiRefreshTimer();
     void resetTaskbarModeState();
     void applySnapshot(const PriceSnapshot& snapshot);
+    void trimRecentOutputs();
+    RuntimeViewState buildRuntimeViewState() const;
+    void clearRuntimePanels();
     void showCalculatorWindow();
     void showSettingsWindow();
-    void applySettings(const DisplaySettings& settings);
+    void applySettings(const AppSettings& settings);
     void refreshSettingsWindow();
 
     static LRESULT CALLBACK hiddenWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -51,8 +57,9 @@ private:
     HWND hiddenWindow_ = nullptr;
     NOTIFYICONDATAW trayIconData_{};
     UINT trayMessageId_ = WM_APP + 1;
-    DisplaySettings settings_{};
+    AppSettings settings_{defaultAppSettings()};
     PriceSnapshot lastSnapshot_{};
+    std::deque<RecentOutputEntry> recentOutputs_;
     int taskbarRefreshFailureCount_ = 0;
     HWND lastTaskbarContainer_ = nullptr;
 

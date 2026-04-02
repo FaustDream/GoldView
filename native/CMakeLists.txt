@@ -9,6 +9,8 @@ add_executable(GoldViewNative WIN32
     src/app.cpp
     src/settings_store.cpp
     src/price_service.cpp
+    src/source_manager.cpp
+    src/quote_source.cpp
     src/average_service.cpp
     src/calculator_window.cpp
     src/settings_window.cpp
