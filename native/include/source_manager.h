@@ -16,7 +16,6 @@ public:
     SourceManager();
 
     void updateSettings(const AppSettings& settings);
-    void clearRuntimeLogs();
     bool tick(PriceSnapshot* snapshot);
     PriceServiceStatus currentStatus() const;
     PriceSnapshot currentSnapshot() const;

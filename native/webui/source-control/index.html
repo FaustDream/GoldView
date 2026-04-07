@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据源控制</title>
+  <link rel="stylesheet" href="../common/base.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <section class="hero-card">
+      <div>
+        <div class="hero-title">数据源控制</div>
+        <div class="hero-subtitle">统一管理自动切换、阈值与各数据源优先级。</div>
+      </div>
+      <div class="status-chip">最近成功时间：<span id="last-success">--</span></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">全局策略</h2>
+      <div class="grid two">
+        <label class="checkbox"><input id="auto-refresh-enabled" type="checkbox" /><span>启用自动刷新</span></label>
+        <label class="checkbox"><input id="auto-switch-source" type="checkbox" /><span>自动切换数据源</span></label>
+        <div class="field">
+          <label for="preferred-source">首选数据源</label>
+          <select id="preferred-source"></select>
+        </div>
+        <div class="field">
+          <label for="success-threshold">成功率阈值 (%)</label>
+          <input id="success-threshold" type="number" min="50" max="100" step="1" />
+        </div>
+        <div class="field">
+          <label for="latency-threshold">延迟阈值 (ms)</label>
+          <input id="latency-threshold" type="number" min="100" max="5000" step="1" />
+        </div>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-header">
+        <div>数据源</div>
+        <div>启用</div>
+        <div>优先级</div>
+        <div>权重</div>
+      </div>
+      <div id="source-rows"></div>
+    </section>
+
+    <div class="notice" id="save-notice"></div>
+
+    <div class="actions">
+      <button id="cancel-button" class="ghost" type="button">取消</button>
+      <button id="save-button" class="primary" type="button">保存</button>
+    </div>
+  </div>
+
+  <script src="../common/bridge.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

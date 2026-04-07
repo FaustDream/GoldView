@@ -21,7 +21,6 @@ public:
     void start(SnapshotCallback callback);
     void stop();
     void updateSettings(const AppSettings& settings);
-    void clearRuntimeLogs();
     PriceServiceStatus currentStatus() const;
     PriceSnapshot currentSnapshot() const;
 

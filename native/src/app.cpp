@@ -3,11 +3,10 @@
 #include <commctrl.h>
 #include <cstdint>
 #include <shellapi.h>
-#include <ctime>
 #include <sstream>
-#include <iomanip>
 #include <vector>
 
+#include "icon_utils.h"
 #include "theme.h"
 
 namespace goldview {
@@ -23,58 +22,7 @@ constexpr UINT_PTR kTaskbarRecoveryTimer = 3001;
 constexpr UINT_PTR kUiRefreshTimer = 3002;
 constexpr int kTaskbarRecoveryThreshold = 3;
 constexpr UINT kSnapshotMessage = WM_APP + 2;
-
-HICON createAppIcon() {
-    constexpr int size = 64;
-    HDC screenDc = GetDC(nullptr);
-    HDC memoryDc = CreateCompatibleDC(screenDc);
-    HBITMAP colorBitmap = CreateCompatibleBitmap(screenDc, size, size);
-    HBITMAP maskBitmap = CreateBitmap(size, size, 1, 1, nullptr);
-    auto oldBitmap = SelectObject(memoryDc, colorBitmap);
-
-    RECT rect{0, 0, size, size};
-    HBRUSH background = CreateSolidBrush(theme::kInk);
-    FillRect(memoryDc, &rect, background);
-    DeleteObject(background);
-
-    HBRUSH outerBrush = CreateSolidBrush(theme::kInk);
-    HBRUSH innerBrush = CreateSolidBrush(theme::kGold);
-    HPEN pen = CreatePen(PS_SOLID, 2, theme::kGoldDark);
-    auto oldBrush = SelectObject(memoryDc, outerBrush);
-    auto oldPen = SelectObject(memoryDc, pen);
-    Ellipse(memoryDc, 4, 4, 60, 60);
-    SelectObject(memoryDc, innerBrush);
-    Ellipse(memoryDc, 10, 10, 54, 54);
-    SetBkMode(memoryDc, TRANSPARENT);
-    SetTextColor(memoryDc, theme::kInk);
-    HFONT font = CreateFontW(24, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-        DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-    const auto oldFont = SelectObject(memoryDc, font);
-    RECT textRect{0, 14, size, size};
-    DrawTextW(memoryDc, L"GV", -1, &textRect, DT_CENTER | DT_TOP | DT_SINGLELINE);
-
-    SelectObject(memoryDc, oldFont);
-    SelectObject(memoryDc, oldBrush);
-    SelectObject(memoryDc, oldPen);
-    DeleteObject(font);
-    DeleteObject(outerBrush);
-    DeleteObject(innerBrush);
-    DeleteObject(pen);
-    SelectObject(memoryDc, oldBitmap);
-
-    ICONINFO iconInfo{};
-    iconInfo.fIcon = TRUE;
-    iconInfo.hbmColor = colorBitmap;
-    iconInfo.hbmMask = maskBitmap;
-    HICON icon = CreateIconIndirect(&iconInfo);
-
-    DeleteObject(colorBitmap);
-    DeleteObject(maskBitmap);
-    DeleteDC(memoryDc);
-    ReleaseDC(nullptr, screenDc);
-    return icon;
-}
+constexpr int kTrayIconSize = 32;
 
 std::wstring rectToString(const RECT& rect) {
     std::wstringstream stream;
@@ -114,21 +62,6 @@ bool rectFitsInsideParentClient(HWND parent, const RECT& rectInParent) {
            rectInParent.bottom <= parentClientRect.bottom;
 }
 
-RecentOutputEntry buildRecentOutput(const PriceSnapshot& snapshot) {
-    std::wstringstream stream;
-    if (snapshot.updatedAt != 0) {
-        std::time_t timeValue = static_cast<std::time_t>(snapshot.updatedAt);
-        std::tm localTime{};
-        localtime_s(&localTime, &timeValue);
-        stream << std::put_time(&localTime, L"%H:%M:%S") << L"  ";
-    }
-    stream << std::fixed << std::setprecision(2) << snapshot.currentPrice;
-    if (!snapshot.source.empty()) {
-        stream << L"  " << snapshot.source;
-    }
-    return RecentOutputEntry{stream.str(), snapshot.source, snapshot.currentPrice, snapshot.updatedAt, snapshot.delayed};
-}
-
 }  // namespace
 
 App::App(HINSTANCE instanceHandle)
@@ -149,11 +82,14 @@ bool App::initialize() {
     settingsStore_.save(settings_);
     taskbarLogger_.info(L"Initializing GoldView native runtime");
 
-    WNDCLASSW windowClass{};
+    WNDCLASSEXW windowClass{};
+    windowClass.cbSize = sizeof(windowClass);
     windowClass.lpfnWndProc = App::hiddenWindowProc;
     windowClass.hInstance = instanceHandle_;
     windowClass.lpszClassName = kHiddenClassName;
-    RegisterClassW(&windowClass);
+    windowClass.hIcon = loadAppIcon(instanceHandle_, 32);
+    windowClass.hIconSm = loadAppIcon(instanceHandle_, 16);
+    RegisterClassExW(&windowClass);
 
     hiddenWindow_ = CreateWindowExW(
         0,
@@ -174,7 +110,7 @@ bool App::initialize() {
     }
 
     taskbarHost_ = std::make_unique<TaskbarHost>();
-    calculatorWindow_ = std::make_unique<CalculatorWindow>(settingsStore_, averageService_);
+    calculatorWindow_ = std::make_unique<CalculatorWindow>(averageService_);
     settingsWindow_ = std::make_unique<SettingsWindow>();
     if (!taskbarHost_->create(instanceHandle_)) {
         taskbarLogger_.error(L"Failed to create window hosts");
@@ -182,11 +118,9 @@ bool App::initialize() {
     }
 
     settingsWindow_->setSettings(settings_);
+    settingsWindow_->setStatus(priceService_.currentStatus());
     settingsWindow_->setSettingsSavedCallback([this](const AppSettings& settings) {
         applySettings(settings);
-    });
-    settingsWindow_->setClearLogsCallback([this]() {
-        clearRuntimePanels();
     });
 
     createTrayIcon();
@@ -242,7 +176,7 @@ void App::createTrayIcon() {
     trayIconData_.uID = kTrayIconId;
     trayIconData_.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     trayIconData_.uCallbackMessage = trayMessageId_;
-    trayIconData_.hIcon = createAppIcon();
+    trayIconData_.hIcon = loadAppIcon(instanceHandle_, kTrayIconSize);
     wcscpy_s(trayIconData_.szTip, L"GoldView");
     Shell_NotifyIconW(NIM_ADD, &trayIconData_);
 }
@@ -491,32 +425,8 @@ void App::resetTaskbarModeState() {
     lastTaskbarContainer_ = nullptr;
 }
 
-void App::trimRecentOutputs() {
-    const size_t limit = static_cast<size_t>((std::max)(10, settings_.runtime.recentOutputLimit));
-    while (recentOutputs_.size() > limit) {
-        recentOutputs_.pop_back();
-    }
-}
-
-RuntimeViewState App::buildRuntimeViewState() const {
-    RuntimeViewState state{};
-    state.status = priceService_.currentStatus();
-    state.recentOutputs.assign(recentOutputs_.begin(), recentOutputs_.end());
-    return state;
-}
-
-void App::clearRuntimePanels() {
-    recentOutputs_.clear();
-    priceService_.clearRuntimeLogs();
-    refreshSettingsWindow();
-}
-
 void App::applySnapshot(const PriceSnapshot& snapshot) {
     lastSnapshot_ = snapshot;
-    if (snapshot.currentPrice > 0.0) {
-        recentOutputs_.push_front(buildRecentOutput(snapshot));
-        trimRecentOutputs();
-    }
     if (activeHost_) {
         activeHost_->updateContent(snapshot, settings_.display);
     }
@@ -534,20 +444,17 @@ void App::showCalculatorWindow() {
 
 void App::showSettingsWindow() {
     if (settingsWindow_) {
-        taskbarLogger_.info(L"Opening settings window");
+        taskbarLogger_.info(L"Opening source control window");
         if (!settingsWindow_->isCreated()) {
-            taskbarLogger_.info(L"Creating settings window on demand");
+            taskbarLogger_.info(L"Creating source control window on demand");
             settingsWindow_->create(instanceHandle_);
             settingsWindow_->setSettings(settings_);
+            settingsWindow_->setStatus(priceService_.currentStatus());
             settingsWindow_->setSettingsSavedCallback([this](const AppSettings& settings) {
                 applySettings(settings);
             });
-            settingsWindow_->setClearLogsCallback([this]() {
-                clearRuntimePanels();
-            });
-            refreshSettingsWindow();
         }
-        taskbarLogger_.info(L"Focusing settings window");
+        taskbarLogger_.info(L"Focusing source control window");
         settingsWindow_->focusOrShow();
     }
 }
@@ -557,7 +464,6 @@ void App::applySettings(const AppSettings& settings) {
     settingsStore_.save(settings_);
     priceService_.updateSettings(settings_);
     enableUiRefreshTimer();
-    trimRecentOutputs();
 
     if (taskbarHost_) {
         taskbarHost_->updateContent(lastSnapshot_, settings_.display);
@@ -574,7 +480,7 @@ void App::applySettings(const AppSettings& settings) {
 void App::refreshSettingsWindow() {
     if (settingsWindow_) {
         settingsWindow_->setSettings(settings_);
-        settingsWindow_->updateRuntimeState(buildRuntimeViewState());
+        settingsWindow_->setStatus(priceService_.currentStatus());
     }
 }
 
@@ -659,7 +565,7 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 
 void App::showTrayMenu() {
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, kMenuSettings, L"设置");
+    AppendMenuW(menu, MF_STRING, kMenuSettings, L"数据源控制");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuCalculator, L"均价计算");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);

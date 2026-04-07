@@ -34,10 +34,6 @@ void PriceService::updateSettings(const AppSettings& settings) {
     tickIntervalMs_.store((std::max)(100, settings.runtime.uiRefreshIntervalMs));
 }
 
-void PriceService::clearRuntimeLogs() {
-    sourceManager_.clearRuntimeLogs();
-}
-
 PriceServiceStatus PriceService::currentStatus() const {
     return sourceManager_.currentStatus();
 }

@@ -28,12 +28,6 @@ void SourceManager::updateSettings(const AppSettings& settings) {
     appendLogLocked(RuntimeLogLevel::Info, L"已应用新的数据源与阈值设置");
 }
 
-void SourceManager::clearRuntimeLogs() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    runtimeLogs_.clear();
-    appendLogLocked(RuntimeLogLevel::Info, L"已清空运行日志缓冲");
-}
-
 bool SourceManager::tick(PriceSnapshot* snapshot) {
     QuoteSourceConfig primaryConfig{};
     QuoteSourceConfig probeConfig{};

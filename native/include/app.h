@@ -1,9 +1,7 @@
 #pragma once
 
-#include <windows.h>
-
-#include <deque>
 #include <memory>
+#include <windows.h>
 
 #include "average_service.h"
 #include "calculator_window.h"
@@ -41,9 +39,6 @@ private:
     void disableUiRefreshTimer();
     void resetTaskbarModeState();
     void applySnapshot(const PriceSnapshot& snapshot);
-    void trimRecentOutputs();
-    RuntimeViewState buildRuntimeViewState() const;
-    void clearRuntimePanels();
     void showCalculatorWindow();
     void showSettingsWindow();
     void applySettings(const AppSettings& settings);
@@ -59,7 +54,6 @@ private:
     UINT trayMessageId_ = WM_APP + 1;
     AppSettings settings_{defaultAppSettings()};
     PriceSnapshot lastSnapshot_{};
-    std::deque<RecentOutputEntry> recentOutputs_;
     int taskbarRefreshFailureCount_ = 0;
     HWND lastTaskbarContainer_ = nullptr;
 
