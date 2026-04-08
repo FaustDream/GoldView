@@ -10,6 +10,7 @@ namespace {
 
 constexpr UINT kTrayIconId = 1001;
 constexpr UINT kMenuSettings = 2001;
+constexpr UINT kMenuLaunchAtStartup = 2002;
 constexpr UINT kMenuCalculator = 2003;
 constexpr UINT kMenuExit = 2099;
 constexpr int kTrayIconSize = 32;
@@ -39,11 +40,12 @@ void App::destroyTrayIcon() {
 
 void App::showTrayMenu() {
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, kMenuSettings, L"Settings");
+    AppendMenuW(menu, MF_STRING, kMenuSettings, L"设置");
+    AppendMenuW(menu, MF_STRING | (isLaunchAtStartupEnabled() ? MF_CHECKED : MF_UNCHECKED), kMenuLaunchAtStartup, L"开机自启动");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuCalculator, L"Calculator");
+    AppendMenuW(menu, MF_STRING, kMenuCalculator, L"计算器");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuExit, L"Exit");
+    AppendMenuW(menu, MF_STRING, kMenuExit, L"退出");
 
     POINT cursorPoint{};
     GetCursorPos(&cursorPoint);

@@ -8,10 +8,10 @@ __pycache__/
 
 # Distribution / packaging
 bin/
-build/
+/build/
 release/
 develop-eggs/
-dist/
+/dist/
 downloads/
 eggs/
 .eggs/
@@ -68,5 +68,5 @@ venv.bak/
 *.swo
 
 # GoldView build outputs
-build/
-dist/
+/build/
+/dist/

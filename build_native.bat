@@ -18,10 +18,26 @@ if not defined VCINSTALLDIR (
 )
 
 if not defined WEBVIEW2_SDK_DIR (
+  for /f "delims=" %%D in ('dir /b /ad /o-n "%SCRIPT_DIR%packages\Microsoft.Web.WebView2.*" 2^>nul') do (
+    if not defined WEBVIEW2_SDK_DIR if exist "%SCRIPT_DIR%packages\%%~D\build\native\include\WebView2.h" if exist "%SCRIPT_DIR%packages\%%~D\build\native\x64\WebView2LoaderStatic.lib" (
+      set "WEBVIEW2_SDK_DIR=%SCRIPT_DIR%packages\%%~D"
+    )
+  )
+)
+
+if not defined WEBVIEW2_SDK_DIR (
+  for /f "delims=" %%D in ('dir /b /ad /o-n "%USERPROFILE%\.nuget\packages\microsoft.web.webview2" 2^>nul') do (
+    if not defined WEBVIEW2_SDK_DIR if exist "%USERPROFILE%\.nuget\packages\microsoft.web.webview2\%%~D\build\native\include\WebView2.h" if exist "%USERPROFILE%\.nuget\packages\microsoft.web.webview2\%%~D\build\native\x64\WebView2LoaderStatic.lib" (
+      set "WEBVIEW2_SDK_DIR=%USERPROFILE%\.nuget\packages\microsoft.web.webview2\%%~D"
+    )
+  )
+)
+
+if not defined WEBVIEW2_SDK_DIR (
   for %%R in ("%ProgramFiles(x86)%\Microsoft SDKs\WebView2" "%ProgramFiles%\Microsoft SDKs\WebView2") do (
     if not defined WEBVIEW2_SDK_DIR if exist "%%~R" (
       for /f "delims=" %%D in ('dir /b /ad /o-n "%%~R" 2^>nul') do (
-        if not defined WEBVIEW2_SDK_DIR if exist "%%~R\%%~D\build\native\include\WebView2.h" (
+        if not defined WEBVIEW2_SDK_DIR if exist "%%~R\%%~D\build\native\include\WebView2.h" if exist "%%~R\%%~D\build\native\x64\WebView2LoaderStatic.lib" (
           set "WEBVIEW2_SDK_DIR=%%~R\%%~D"
         )
       )
@@ -30,15 +46,13 @@ if not defined WEBVIEW2_SDK_DIR (
 )
 
 if not defined WEBVIEW2_SDK_DIR (
-  for /f "delims=" %%D in ('dir /b /ad /o-n "%SCRIPT_DIR%packages\Microsoft.Web.WebView2.*" 2^>nul') do (
-    if not defined WEBVIEW2_SDK_DIR if exist "%SCRIPT_DIR%packages\%%~D\build\native\include\WebView2.h" (
-      set "WEBVIEW2_SDK_DIR=%SCRIPT_DIR%packages\%%~D"
-    )
-  )
-)
-
-if not defined WEBVIEW2_SDK_DIR (
-  echo [build_native] WebView2 SDK not found. Please set WEBVIEW2_SDK_DIR to the SDK root.
+  echo [build_native] WebView2 SDK not found.
+  echo [build_native] Looked in:
+  echo [build_native]   1. WEBVIEW2_SDK_DIR
+  echo [build_native]   2. %SCRIPT_DIR%packages\Microsoft.Web.WebView2.*
+  echo [build_native]   3. %USERPROFILE%\.nuget\packages\microsoft.web.webview2\*
+  echo [build_native]   4. System WebView2 SDK folders under Program Files
+  echo [build_native] Set WEBVIEW2_SDK_DIR to the extracted SDK root if you downloaded the minimal package manually.
   exit /b 1
 )
 

@@ -43,6 +43,9 @@ private:
     void showSettingsWindow();
     void applySettings(const AppSettings& settings);
     void refreshSettingsWindow();
+    bool syncLaunchAtStartup();
+    bool setLaunchAtStartupEnabled(bool enabled);
+    bool isLaunchAtStartupEnabled() const;
 
     static LRESULT CALLBACK hiddenWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

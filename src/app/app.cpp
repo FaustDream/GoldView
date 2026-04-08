@@ -1,6 +1,7 @@
 #include "app.h"
 
 #include <commctrl.h>
+#include <shellapi.h>
 
 #include "icon_utils.h"
 
@@ -9,6 +10,8 @@ namespace goldview {
 namespace {
 
 constexpr wchar_t kHiddenClassName[] = L"GoldViewNativeHiddenWindow";
+constexpr wchar_t kStartupRunKeyPath[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+constexpr wchar_t kStartupValueName[] = L"GoldView";
 
 }
 
@@ -27,6 +30,7 @@ bool App::initialize() {
     InitCommonControlsEx(&commonControls);
 
     settings_ = settingsStore_.load();
+    settings_.runtime.launchAtStartup = isLaunchAtStartupEnabled();
     settingsStore_.save(settings_);
     taskbarLogger_.info(L"Initializing GoldView native runtime");
 
@@ -176,6 +180,7 @@ void App::showSettingsWindow() {
 
 void App::applySettings(const AppSettings& settings) {
     settings_ = settings;
+    syncLaunchAtStartup();
     settingsStore_.save(settings_);
     priceService_.updateSettings(settings_);
     enableUiRefreshTimer();
@@ -197,6 +202,75 @@ void App::refreshSettingsWindow() {
         settingsWindow_->setSettings(settings_);
         settingsWindow_->setStatus(priceService_.currentStatus());
     }
+}
+
+bool App::syncLaunchAtStartup() {
+    const bool actual = isLaunchAtStartupEnabled();
+    if (actual == settings_.runtime.launchAtStartup) {
+        return true;
+    }
+    if (!setLaunchAtStartupEnabled(settings_.runtime.launchAtStartup)) {
+        settings_.runtime.launchAtStartup = actual;
+        return false;
+    }
+    return true;
+}
+
+bool App::setLaunchAtStartupEnabled(bool enabled) {
+    HKEY runKey = nullptr;
+    const LONG openResult = RegCreateKeyExW(
+        HKEY_CURRENT_USER,
+        kStartupRunKeyPath,
+        0,
+        nullptr,
+        REG_OPTION_NON_VOLATILE,
+        KEY_QUERY_VALUE | KEY_SET_VALUE,
+        nullptr,
+        &runKey,
+        nullptr);
+    if (openResult != ERROR_SUCCESS) {
+        taskbarLogger_.error(L"Failed to open startup registry key");
+        return false;
+    }
+
+    bool success = false;
+    if (enabled) {
+        wchar_t modulePath[MAX_PATH]{};
+        GetModuleFileNameW(instanceHandle_, modulePath, MAX_PATH);
+        std::wstring command = L"\"";
+        command += modulePath;
+        command += L"\"";
+        const DWORD bytes = static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t));
+        success = RegSetValueExW(runKey, kStartupValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(command.c_str()), bytes) == ERROR_SUCCESS;
+    } else {
+        const LONG deleteResult = RegDeleteValueW(runKey, kStartupValueName);
+        success = deleteResult == ERROR_SUCCESS || deleteResult == ERROR_FILE_NOT_FOUND;
+    }
+
+    RegCloseKey(runKey);
+
+    if (!success) {
+        taskbarLogger_.error(enabled ? L"Failed to enable startup launch" : L"Failed to disable startup launch");
+        return false;
+    }
+
+    settings_.runtime.launchAtStartup = enabled;
+    settingsStore_.save(settings_);
+    refreshSettingsWindow();
+    return true;
+}
+
+bool App::isLaunchAtStartupEnabled() const {
+    HKEY runKey = nullptr;
+    const LONG openResult = RegOpenKeyExW(HKEY_CURRENT_USER, kStartupRunKeyPath, 0, KEY_QUERY_VALUE, &runKey);
+    if (openResult != ERROR_SUCCESS) {
+        return false;
+    }
+
+    DWORD type = 0;
+    const LONG queryResult = RegQueryValueExW(runKey, kStartupValueName, nullptr, &type, nullptr, nullptr);
+    RegCloseKey(runKey);
+    return queryResult == ERROR_SUCCESS && type == REG_SZ;
 }
 
 }  // namespace goldview

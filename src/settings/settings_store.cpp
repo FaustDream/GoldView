@@ -89,6 +89,7 @@ AppSettings SettingsStore::load() const {
     const std::wstring legacyPreferred = readString(L"update", L"preferredProvider", L"");
 
     settings.runtime.autoRefreshEnabled = readString(L"runtime", L"autoRefreshEnabled", L"1") != L"0";
+    settings.runtime.launchAtStartup = readString(L"runtime", L"launchAtStartup", L"0") != L"0";
     settings.runtime.autoSwitchSource = !legacyAutoSwitch.empty()
         ? legacyAutoSwitch != L"0"
         : readString(L"runtime", L"autoSwitchSource", L"1") != L"0";
@@ -131,6 +132,7 @@ void SettingsStore::save(const AppSettings& settings) const {
     wchar_t numberBuffer[32]{};
 
     WritePrivateProfileStringW(L"runtime", L"autoRefreshEnabled", boolValue(settings.runtime.autoRefreshEnabled), iniPath_.c_str());
+    WritePrivateProfileStringW(L"runtime", L"launchAtStartup", boolValue(settings.runtime.launchAtStartup), iniPath_.c_str());
     WritePrivateProfileStringW(L"runtime", L"autoSwitchSource", boolValue(settings.runtime.autoSwitchSource), iniPath_.c_str());
     WritePrivateProfileStringW(L"runtime", L"preferredSource", quoteSourceKey(settings.runtime.preferredSource), iniPath_.c_str());
     swprintf_s(numberBuffer, L"%d", settings.runtime.successRateThreshold);

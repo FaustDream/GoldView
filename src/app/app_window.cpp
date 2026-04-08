@@ -5,6 +5,7 @@ namespace goldview {
 namespace {
 
 constexpr UINT kMenuSettings = 2001;
+constexpr UINT kMenuLaunchAtStartup = 2002;
 constexpr UINT kMenuCalculator = 2003;
 constexpr UINT kMenuExit = 2099;
 constexpr UINT_PTR kTaskbarRecoveryTimer = 3001;
@@ -64,6 +65,9 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
         switch (LOWORD(wParam)) {
         case kMenuSettings:
             showSettingsWindow();
+            return 0;
+        case kMenuLaunchAtStartup:
+            setLaunchAtStartupEnabled(!isLaunchAtStartupEnabled());
             return 0;
         case kMenuCalculator:
             showCalculatorWindow();
