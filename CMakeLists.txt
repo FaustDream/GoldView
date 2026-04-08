@@ -38,24 +38,30 @@ if(NOT EXISTS "${WEBVIEW2_LIB_DIR}/WebView2LoaderStatic.lib")
 endif()
 
 add_executable(GoldViewNative WIN32
-    src/main.cpp
-    src/app.cpp
-    src/icon_utils.cpp
-    src/webui_window.cpp
-    src/settings_store.cpp
-    src/price_service.cpp
-    src/source_manager.cpp
-    src/quote_source.cpp
-    src/average_service.cpp
-    src/calculator_window.cpp
-    src/settings_window.cpp
-    src/taskbar_logger.cpp
-    src/taskbar_topology_detector.cpp
-    src/taskbar_tray_detector.cpp
-    src/taskbar_metrics.cpp
-    src/taskbar_anchor_resolver.cpp
-    src/taskbar_slot_controller.cpp
-    src/taskbar_host.cpp
+    src/app/main.cpp
+    src/app/app.cpp
+    src/app/app_tray.cpp
+    src/app/app_layout.cpp
+    src/app/app_window.cpp
+    src/utils/icon_utils.cpp
+    src/ui/webui_window.cpp
+    src/settings/settings_store.cpp
+    src/pricing/price_service.cpp
+    src/pricing/source_manager.cpp
+    src/pricing/source_manager_tick.cpp
+    src/pricing/source_manager_health.cpp
+    src/pricing/source_manager_selection.cpp
+    src/pricing/quote_source.cpp
+    src/pricing/average_service.cpp
+    src/ui/calculator_window.cpp
+    src/settings/settings_window.cpp
+    src/taskbar/taskbar_logger.cpp
+    src/taskbar/taskbar_topology_detector.cpp
+    src/taskbar/taskbar_tray_detector.cpp
+    src/taskbar/taskbar_metrics.cpp
+    src/taskbar/taskbar_anchor_resolver.cpp
+    src/taskbar/taskbar_slot_controller.cpp
+    src/taskbar/taskbar_host.cpp
 )
 
 target_include_directories(GoldViewNative PRIVATE include "${WEBVIEW2_INCLUDE_DIR}")

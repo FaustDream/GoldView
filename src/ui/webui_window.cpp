@@ -163,7 +163,7 @@ bool WebUiWindow::create(HINSTANCE instanceHandle, MessageHandler messageHandler
 
     impl_->webRoot = locateWebUiRoot(instanceHandle_);
     if (impl_->webRoot.empty()) {
-        MessageBoxW(nullptr, L"未找到 native/webui 前端资源目录。", title_.c_str(), MB_ICONERROR);
+        MessageBoxW(nullptr, L"未找到 webui 前端资源目录。", title_.c_str(), MB_ICONERROR);
         return false;
     }
 
@@ -179,11 +179,24 @@ bool WebUiWindow::create(HINSTANCE instanceHandle, MessageHandler messageHandler
     RegisterClassExW(&windowClass);
 
     windowHandle_ = CreateWindowExW(0, className_.c_str(), title_.c_str(),
-        (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_MINIMIZEBOX) | WS_CLIPCHILDREN,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         CW_USEDEFAULT, CW_USEDEFAULT, width_, height_, nullptr, nullptr, instanceHandle_, this);
     if (!windowHandle_) {
         return false;
     }
+
+    LONG_PTR style = GetWindowLongPtrW(windowHandle_, GWL_STYLE);
+    style |= WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+    style &= ~static_cast<LONG_PTR>(WS_CHILD);
+    SetWindowLongPtrW(windowHandle_, GWL_STYLE, style);
+
+    LONG_PTR exStyle = GetWindowLongPtrW(windowHandle_, GWL_EXSTYLE);
+    exStyle &= ~static_cast<LONG_PTR>(WS_EX_TOOLWINDOW);
+    exStyle |= WS_EX_APPWINDOW;
+    SetWindowLongPtrW(windowHandle_, GWL_EXSTYLE, exStyle);
+
+    SetWindowPos(windowHandle_, nullptr, 0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
     initializeWebView();
     return true;
@@ -316,7 +329,13 @@ void WebUiWindow::initializeWebView() {
                                         return S_OK;
                                     }).Get(), nullptr);
 
-                            impl_->webView->SetVirtualHostNameToFolderMapping(
+                            ComPtr<ICoreWebView2_3> webView3;
+                            if (FAILED(impl_->webView.As(&webView3)) || !webView3) {
+                                MessageBoxW(windowHandle_, L"当前 WebView2 SDK 不支持虚拟主机目录映射。", title_.c_str(), MB_ICONERROR);
+                                return E_NOINTERFACE;
+                            }
+
+                            webView3->SetVirtualHostNameToFolderMapping(
                                 kWebUiHostName,
                                 impl_->webRoot.c_str(),
                                 COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW);
