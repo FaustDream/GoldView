@@ -93,9 +93,9 @@ struct PriceSnapshot {
 };
 
 struct DisplaySettings {
-    std::wstring fontName = L"Consolas";
-    int fontSize = 20;
-    COLORREF textColor = RGB(241, 196, 15);
+    std::wstring fontName = L"Segoe UI";
+    int fontSize = 18;
+    COLORREF textColor = RGB(0, 0, 0);
     COLORREF backgroundColor = RGB(17, 24, 39);
     bool backgroundTransparent = true;
     TextAlignment textAlignment = TextAlignment::Center;

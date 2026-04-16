@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "taskbar_text_style.h"
+
 #pragma comment(lib, "Shlwapi.lib")
 
 namespace goldview {
@@ -113,6 +115,7 @@ AppSettings SettingsStore::load() const {
     settings.display.backgroundTransparent = readString(L"display", L"backgroundTransparent", L"1") != L"0";
     settings.display.textAlignment = alignmentFromKey(readString(L"display", L"textAlignment", L"center"));
     settings.display.horizontalLayout = readString(L"display", L"horizontalLayout", L"1") != L"0";
+    settings.display = taskbar_text_style::normalizeDisplaySettings(settings.display);
 
     for (auto& source : settings.sources) {
         const std::wstring section = sourceSection(source.kind);
