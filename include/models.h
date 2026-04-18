@@ -105,6 +105,7 @@ struct DisplaySettings {
 struct RuntimeSettings {
     bool autoRefreshEnabled = true;
     bool launchAtStartup = false;
+    bool launchOnWorkdaysOnly = true;
     bool autoSwitchSource = true;
     QuoteSourceKind preferredSource = QuoteSourceKind::Sina;
     int successRateThreshold = 95;

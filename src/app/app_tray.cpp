@@ -41,7 +41,7 @@ void App::destroyTrayIcon() {
 void App::showTrayMenu() {
     HMENU menu = CreatePopupMenu();
     AppendMenuW(menu, MF_STRING, kMenuSettings, L"设置");
-    AppendMenuW(menu, MF_STRING | (isLaunchAtStartupEnabled() ? MF_CHECKED : MF_UNCHECKED), kMenuLaunchAtStartup, L"开机自启动");
+    AppendMenuW(menu, MF_STRING | (isLaunchAtStartupEnabled() ? MF_CHECKED : MF_UNCHECKED), kMenuLaunchAtStartup, L"工作日自启");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuCalculator, L"计算器");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);

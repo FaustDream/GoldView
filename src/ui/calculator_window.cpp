@@ -6,8 +6,8 @@ namespace goldview {
 
 namespace {
 
-constexpr int kWindowWidth = 760;
-constexpr int kWindowHeight = 760;
+constexpr int kWindowWidth = 680;
+constexpr int kWindowHeight = 520;
 
 }  // namespace
 

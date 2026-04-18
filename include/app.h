@@ -24,7 +24,7 @@ public:
     explicit App(HINSTANCE instanceHandle);
     ~App();
 
-    bool initialize();
+    bool initialize(int argc, wchar_t* argv[]);
     int run();
     void shutdown();
 
@@ -46,6 +46,9 @@ private:
     bool syncLaunchAtStartup();
     bool setLaunchAtStartupEnabled(bool enabled);
     bool isLaunchAtStartupEnabled() const;
+    bool isAutoStartLaunch() const;
+    void setAutoStartLaunch(bool value);
+    bool autoStartLaunch_ = false;
 
     static LRESULT CALLBACK hiddenWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

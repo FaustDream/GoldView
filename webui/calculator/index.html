@@ -4,49 +4,64 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>均价计算</title>
-  <link rel="stylesheet" href="../common/base.css" />
+  <link rel="stylesheet" href="calculator.css" />
 </head>
 <body>
   <div class="app-shell">
+    <!-- Left: Input -->
     <section class="panel">
-      <h2 class="panel-title">输入参数</h2>
-      <div class="grid two">
-        <div class="field">
-          <label for="old-price">原有单价</label>
-          <input id="old-price" type="number" step="0.01" min="0" />
+      <h2 class="panel-title">输入</h2>
+      <div class="input-section">
+        <div class="input-row">
+          <div class="field">
+            <label for="old-price">原有单价</label>
+            <input id="old-price" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label for="old-weight">原有克重</label>
+            <input id="old-weight" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
         </div>
-        <div class="field">
-          <label for="old-weight">原有克重</label>
-          <input id="old-weight" type="number" step="0.01" min="0" />
-        </div>
-        <div class="field">
-          <label for="new-price">买入单价</label>
-          <input id="new-price" type="number" step="0.01" min="0" />
-        </div>
-        <div class="field">
-          <label for="new-weight">买入克重</label>
-          <input id="new-weight" type="number" step="0.01" min="0" />
+        <div class="input-row">
+          <div class="field">
+            <label for="new-price">买入单价</label>
+            <input id="new-price" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label for="new-weight">买入克重</label>
+            <input id="new-weight" type="number" step="0.01" min="0" placeholder="0.00" />
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="panel">
-      <h2 class="panel-title">计算结果</h2>
+    <!-- Right: Result -->
+    <section class="panel result-panel">
+      <h2 class="panel-title">结果</h2>
       <div class="inline-result">
-        <div class="metric"><span>均价</span><strong id="result-price">--</strong></div>
-        <div class="metric"><span>总克重</span><strong id="result-total">--</strong></div>
+        <div class="metric">
+          <span>均价</span>
+          <strong id="result-price">--</strong>
+        </div>
+        <div class="metric">
+          <span>总克重</span>
+          <strong id="result-total" class="highlight">--</strong>
+        </div>
       </div>
     </section>
 
-    <div id="calculator-notice" class="notice"></div>
-
+    <!-- Actions -->
     <div class="actions">
-      <button id="clear-button" class="ghost" type="button">清空输入</button>
-      <button id="calculate-button" class="primary" type="button">开始计算</button>
+      <button id="clear-button" type="button">清空</button>
+      <button id="calculate-button" class="primary" type="button">计算</button>
     </div>
 
-    <section class="panel">
-      <h2 class="panel-title">历史记录（仅当前运行有效）</h2>
+    <!-- Notice -->
+    <div id="calculator-notice" class="notice"></div>
+
+    <!-- History -->
+    <section class="history-section panel">
+      <h2 class="panel-title">历史记录</h2>
       <div id="history-list" class="history-list"></div>
     </section>
   </div>

@@ -1,6 +1,7 @@
 #include "app.h"
 
 #include <commctrl.h>
+#include <ctime>
 #include <shellapi.h>
 
 #include "icon_utils.h"
@@ -12,6 +13,28 @@ namespace {
 constexpr wchar_t kHiddenClassName[] = L"GoldViewNativeHiddenWindow";
 constexpr wchar_t kStartupRunKeyPath[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 constexpr wchar_t kStartupValueName[] = L"GoldView";
+constexpr wchar_t kAutoStartArg[] = L"--autostart";
+
+bool isWorkday() {
+    std::tm localTime{};
+    std::time_t now = std::time(nullptr);
+#ifdef _WIN32
+    localtime_s(&localTime, &now);
+#else
+    localTime = *std::localtime(&now);
+#endif
+    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    return localTime.tm_wday >= 1 && localTime.tm_wday <= 5;
+}
+
+bool parseCommandLineForAutoStart(LPWSTR* argv, int argc) {
+    for (int i = 1; i < argc; ++i) {
+        if (wcscmp(argv[i], kAutoStartArg) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
 }
 
@@ -23,7 +46,18 @@ App::~App() {
     shutdown();
 }
 
-bool App::initialize() {
+bool App::initialize(int argc, wchar_t* argv[]) {
+    // Detect autostart launch via --autostart argument
+    autoStartLaunch_ = parseCommandLineForAutoStart(argv, argc);
+
+    settings_ = settingsStore_.load();
+
+    // Only check workday restriction when launched via autostart (not manual launch)
+    if (autoStartLaunch_ && settings_.runtime.launchAtStartup && settings_.runtime.launchOnWorkdaysOnly && !isWorkday()) {
+        taskbarLogger_.info(L"Skipping autostart on non-workday (weekend)");
+        return false;
+    }
+
     INITCOMMONCONTROLSEX commonControls{};
     commonControls.dwSize = sizeof(commonControls);
     commonControls.dwICC = ICC_TAB_CLASSES | ICC_STANDARD_CLASSES;
@@ -239,7 +273,8 @@ bool App::setLaunchAtStartupEnabled(bool enabled) {
         GetModuleFileNameW(instanceHandle_, modulePath, MAX_PATH);
         std::wstring command = L"\"";
         command += modulePath;
-        command += L"\"";
+        command += L"\" ";
+        command += kAutoStartArg;
         const DWORD bytes = static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t));
         success = RegSetValueExW(runKey, kStartupValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(command.c_str()), bytes) == ERROR_SUCCESS;
     } else {
@@ -271,6 +306,14 @@ bool App::isLaunchAtStartupEnabled() const {
     const LONG queryResult = RegQueryValueExW(runKey, kStartupValueName, nullptr, &type, nullptr, nullptr);
     RegCloseKey(runKey);
     return queryResult == ERROR_SUCCESS && type == REG_SZ;
+}
+
+bool App::isAutoStartLaunch() const {
+    return autoStartLaunch_;
+}
+
+void App::setAutoStartLaunch(bool value) {
+    autoStartLaunch_ = value;
 }
 
 }  // namespace goldview

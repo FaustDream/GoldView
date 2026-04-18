@@ -25,7 +25,7 @@ function renderState(data) {
   elements.resultPrice.textContent = data.resultPrice || '--';
   elements.resultTotal.textContent = data.resultTotal || '--';
   elements.notice.textContent = data.error || '';
-  elements.notice.className = data.error ? 'notice error' : 'notice';
+  elements.notice.className = 'notice' + (data.error ? ' error' : '');
   renderHistory(data.history || []);
 }
 
