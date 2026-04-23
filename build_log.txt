@@ -1,0 +1,711 @@
+-- Rust Toolchain: stable-x86_64-pc-windows-msvc
+-- Rust Target: x86_64-pc-windows-msvc
+-- Found Rust: C:/Users/kun/.rustup/toolchains/stable-x86_64-pc-windows-msvc/bin/rustc.exe (found version "1.93.0")
+-- Rust Toolchain: stable-x86_64-pc-windows-msvc
+-- Rust Target: x86_64-pc-windows-msvc
+-- Found Rust: C:/Users/kun/.rustup/toolchains/stable-x86_64-pc-windows-msvc/bin/rustc.exe (found suitable version "1.93.0", minimum required is "1.88")
+-- Configuring done (10.9s)
+-- Generating done (0.3s)
+-- Build files have been written to: E:/gitHub/GoldView/build
+[  0%] Built target cargo-prebuild_slint_cpp
+    Updating `rsproxy-sparse` index
+ Downloading crates ...
+  Downloaded allocator-api2 v0.2.21 (registry `rsproxy-sparse`)
+  Downloaded loop9 v0.1.5 (registry `rsproxy-sparse`)
+  Downloaded kurbo v0.13.0 (registry `rsproxy-sparse`)
+  Downloaded ravif v0.13.0 (registry `rsproxy-sparse`)
+  Downloaded wasm-bindgen-macro v0.2.118 (registry `rsproxy-sparse`)
+  Downloaded writeable v0.6.3 (registry `rsproxy-sparse`)
+  Downloaded zerofrom v0.1.7 (registry `rsproxy-sparse`)
+  Downloaded yazi v0.2.1 (registry `rsproxy-sparse`)
+  Downloaded zune-inflate v0.2.54 (registry `rsproxy-sparse`)
+  Downloaded zmij v1.0.21 (registry `rsproxy-sparse`)
+  Downloaded text-size v1.1.1 (registry `rsproxy-sparse`)
+  Downloaded y4m v0.8.0 (registry `rsproxy-sparse`)
+  Downloaded zeno v0.3.3 (registry `rsproxy-sparse`)
+  Downloaded yoke v0.8.2 (registry `rsproxy-sparse`)
+  Downloaded ttf-parser v0.25.1 (registry `rsproxy-sparse`)
+  Downloaded zerovec v0.11.6 (registry `rsproxy-sparse`)
+  Downloaded rustybuzz v0.20.1 (registry `rsproxy-sparse`)
+  Downloaded winnow v0.7.15 (registry `rsproxy-sparse`)
+  Downloaded yoke-derive v0.8.2 (registry `rsproxy-sparse`)
+  Downloaded syn v2.0.117 (registry `rsproxy-sparse`)
+  Downloaded zerocopy v0.8.48 (registry `rsproxy-sparse`)
+  Downloaded rayon v1.11.0 (registry `rsproxy-sparse`)
+  Downloaded unicode-width v0.2.2 (registry `rsproxy-sparse`)
+  Downloaded zune-core v0.5.1 (registry `rsproxy-sparse`)
+  Downloaded read-fonts v0.37.0 (registry `rsproxy-sparse`)
+  Downloaded windows-future v0.3.2 (registry `rsproxy-sparse`)
+  Downloaded winnow v1.0.1 (registry `rsproxy-sparse`)
+  Downloaded zerotrie v0.2.4 (registry `rsproxy-sparse`)
+  Downloaded zune-jpeg v0.5.15 (registry `rsproxy-sparse`)
+  Downloaded zerocopy-derive v0.8.48 (registry `rsproxy-sparse`)
+  Downloaded swash v0.2.7 (registry `rsproxy-sparse`)
+  Downloaded moxcms v0.8.1 (registry `rsproxy-sparse`)
+  Downloaded pxfm v0.1.28 (registry `rsproxy-sparse`)
+  Downloaded toml_edit v0.25.11+spec-1.1.0 (registry `rsproxy-sparse`)
+  Downloaded tiny-skia v0.12.0 (registry `rsproxy-sparse`)
+  Downloaded tiff v0.11.3 (registry `rsproxy-sparse`)
+  Downloaded tar v0.4.45 (registry `rsproxy-sparse`)
+  Downloaded icu_segmenter_data v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded zerofrom-derive v0.1.7 (registry `rsproxy-sparse`)
+  Downloaded skrifa v0.40.0 (registry `rsproxy-sparse`)
+  Downloaded regex-syntax v0.8.10 (registry `rsproxy-sparse`)
+  Downloaded unicode-bidi-mirroring v0.4.0 (registry `rsproxy-sparse`)
+  Downloaded pulldown-cmark v0.13.3 (registry `rsproxy-sparse`)
+  Downloaded harfrust v0.5.2 (registry `rsproxy-sparse`)
+  Downloaded icu_segmenter v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded skia-safe v0.90.0 (registry `rsproxy-sparse`)
+  Downloaded wasm-bindgen-macro-support v0.2.118 (registry `rsproxy-sparse`)
+  Downloaded usvg v0.47.0 (registry `rsproxy-sparse`)
+  Downloaded winit v0.30.13 (registry `rsproxy-sparse`)
+  Downloaded rayon-core v1.13.0 (registry `rsproxy-sparse`)
+  Downloaded prettyplease v0.2.37 (registry `rsproxy-sparse`)
+  Downloaded error-code v3.3.2 (registry `rsproxy-sparse`)
+  Downloaded zerovec-derive v0.11.3 (registry `rsproxy-sparse`)
+  Downloaded unicode-segmentation v1.13.2 (registry `rsproxy-sparse`)
+  Downloaded taffy v0.9.2 (registry `rsproxy-sparse`)
+  Downloaded nom v7.1.3 (registry `rsproxy-sparse`)
+  Downloaded minimal-lexical v0.2.1 (registry `rsproxy-sparse`)
+  Downloaded memchr v2.8.0 (registry `rsproxy-sparse`)
+  Downloaded libc v0.2.184 (registry `rsproxy-sparse`)
+  Downloaded khronos_api v3.1.0 (registry `rsproxy-sparse`)
+  Downloaded rav1e v0.8.1 (registry `rsproxy-sparse`)
+  Downloaded icu_locale_data v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded xml-rs v0.8.28 (registry `rsproxy-sparse`)
+  Downloaded windows-threading v0.2.1 (registry `rsproxy-sparse`)
+  Downloaded windows-core v0.62.2 (registry `rsproxy-sparse`)
+  Downloaded weezl v0.1.12 (registry `rsproxy-sparse`)
+  Downloaded webbrowser v1.2.0 (registry `rsproxy-sparse`)
+  Downloaded skia-bindings v0.90.0 (registry `rsproxy-sparse`)
+  Downloaded resvg v0.47.0 (registry `rsproxy-sparse`)
+  Downloaded portable-atomic v1.13.1 (registry `rsproxy-sparse`)
+  Downloaded png v0.18.1 (registry `rsproxy-sparse`)
+  Downloaded libm v0.2.16 (registry `rsproxy-sparse`)
+  Downloaded countme v3.0.1 (registry `rsproxy-sparse`)
+  Downloaded windows-numerics v0.3.1 (registry `rsproxy-sparse`)
+  Downloaded windows-collections v0.3.2 (registry `rsproxy-sparse`)
+  Downloaded unicode-script v0.5.8 (registry `rsproxy-sparse`)
+  Downloaded parley v0.8.0 (registry `rsproxy-sparse`)
+  Downloaded nom v8.0.0 (registry `rsproxy-sparse`)
+  Downloaded itertools v0.13.0 (registry `rsproxy-sparse`)
+  Downloaded image v0.25.10 (registry `rsproxy-sparse`)
+  Downloaded icu_properties_data v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded glow v0.17.0 (registry `rsproxy-sparse`)
+  Downloaded auto_enums v0.8.8 (registry `rsproxy-sparse`)
+  Downloaded xmlwriter v0.1.0 (registry `rsproxy-sparse`)
+  Downloaded wasm-bindgen-shared v0.2.118 (registry `rsproxy-sparse`)
+  Downloaded unicode-bidi v0.3.18 (registry `rsproxy-sparse`)
+  Downloaded tracing-attributes v0.1.31 (registry `rsproxy-sparse`)
+  Downloaded tinyvec v1.11.0 (registry `rsproxy-sparse`)
+  Downloaded tempfile v3.27.0 (registry `rsproxy-sparse`)
+  Downloaded spin_on v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded scoped-tls-hkt v0.1.5 (registry `rsproxy-sparse`)
+  Downloaded qoi v0.4.1 (registry `rsproxy-sparse`)
+  Downloaded pin-weak v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded parley_data v0.8.0 (registry `rsproxy-sparse`)
+  Downloaded num-bigint v0.4.6 (registry `rsproxy-sparse`)
+  Downloaded muda v0.18.0 (registry `rsproxy-sparse`)
+  Downloaded lyon_extra v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded indexmap v2.14.0 (registry `rsproxy-sparse`)
+  Downloaded imgref v1.12.0 (registry `rsproxy-sparse`)
+  Downloaded icu_normalizer_data v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded icu_normalizer v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded fontdb v0.23.0 (registry `rsproxy-sparse`)
+  Downloaded clru v0.6.3 (registry `rsproxy-sparse`)
+  Downloaded arrayref v0.3.9 (registry `rsproxy-sparse`)
+  Downloaded arg_enum_proc_macro v0.3.4 (registry `rsproxy-sparse`)
+  Downloaded wasm-bindgen v0.2.118 (registry `rsproxy-sparse`)
+  Downloaded v_frame v0.3.9 (registry `rsproxy-sparse`)
+  Downloaded unty v0.0.4 (registry `rsproxy-sparse`)
+  Downloaded unicode-xid v0.2.6 (registry `rsproxy-sparse`)
+  Downloaded unicode-properties v0.1.4 (registry `rsproxy-sparse`)
+  Downloaded unicode-linebreak v0.1.5 (registry `rsproxy-sparse`)
+  Downloaded unicode-ident v1.0.24 (registry `rsproxy-sparse`)
+  Downloaded unicode-ccc v0.4.0 (registry `rsproxy-sparse`)
+  Downloaded tr v0.1.11 (registry `rsproxy-sparse`)
+  Downloaded toml_writer v1.1.1+spec-1.1.0 (registry `rsproxy-sparse`)
+  Downloaded toml_datetime v1.1.1+spec-1.1.0 (registry `rsproxy-sparse`)
+  Downloaded toml v0.9.12+spec-1.1.0 (registry `rsproxy-sparse`)
+  Downloaded tinystr v0.8.3 (registry `rsproxy-sparse`)
+  Downloaded sys-locale v0.3.2 (registry `rsproxy-sparse`)
+  Downloaded strum_macros v0.28.0 (registry `rsproxy-sparse`)
+  Downloaded strum v0.28.0 (registry `rsproxy-sparse`)
+  Downloaded smol_str v0.2.2 (registry `rsproxy-sparse`)
+  Downloaded semver v1.0.28 (registry `rsproxy-sparse`)
+  Downloaded pastey v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded lyon_path v1.0.19 (registry `rsproxy-sparse`)
+  Downloaded lyon_algorithms v1.0.19 (registry `rsproxy-sparse`)
+  Downloaded image-webp v0.2.4 (registry `rsproxy-sparse`)
+  Downloaded icu_locale_core v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded icu_collections v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded hashbrown v0.17.0 (registry `rsproxy-sparse`)
+  Downloaded hashbrown v0.14.5 (registry `rsproxy-sparse`)
+  Downloaded glutin_egl_sys v0.7.1 (registry `rsproxy-sparse`)
+  Downloaded exr v1.74.0 (registry `rsproxy-sparse`)
+  Downloaded cc v1.2.60 (registry `rsproxy-sparse`)
+  Downloaded cbindgen v0.29.2 (registry `rsproxy-sparse`)
+  Downloaded unicode-vo v0.1.0 (registry `rsproxy-sparse`)
+  Downloaded unicase v2.9.0 (registry `rsproxy-sparse`)
+  Downloaded typed-index-collections v3.3.0 (registry `rsproxy-sparse`)
+  Downloaded toml_parser v1.1.2+spec-1.1.0 (registry `rsproxy-sparse`)
+  Downloaded tiny-skia-path v0.12.0 (registry `rsproxy-sparse`)
+  Downloaded svgtypes v0.16.1 (registry `rsproxy-sparse`)
+  Downloaded strict-num v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded static_assertions v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded smol_str v0.3.2 (registry `rsproxy-sparse`)
+  Downloaded slotmap v1.1.1 (registry `rsproxy-sparse`)
+  Downloaded simplecss v0.2.2 (registry `rsproxy-sparse`)
+  Downloaded simd_helpers v0.1.0 (registry `rsproxy-sparse`)
+  Downloaded simd-adler32 v0.3.9 (registry `rsproxy-sparse`)
+  Downloaded serde_spanned v1.1.1 (registry `rsproxy-sparse`)
+  Downloaded rustversion v1.0.22 (registry `rsproxy-sparse`)
+  Downloaded rustc-hash v2.1.2 (registry `rsproxy-sparse`)
+  Downloaded rustc-hash v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded roxmltree v0.21.1 (registry `rsproxy-sparse`)
+  Downloaded rowan v0.16.1 (registry `rsproxy-sparse`)
+  Downloaded rgb v0.8.53 (registry `rsproxy-sparse`)
+  Downloaded pulldown-cmark-escape v0.11.0 (registry `rsproxy-sparse`)
+  Downloaded profiling-procmacros v1.0.17 (registry `rsproxy-sparse`)
+  Downloaded potential_utf v0.1.5 (registry `rsproxy-sparse`)
+  Downloaded pkg-config v0.3.33 (registry `rsproxy-sparse`)
+  Downloaded pin-project-lite v0.2.17 (registry `rsproxy-sparse`)
+  Downloaded pin-project-internal v1.1.11 (registry `rsproxy-sparse`)
+  Downloaded pin-project v1.1.11 (registry `rsproxy-sparse`)
+  Downloaded paste v1.0.15 (registry `rsproxy-sparse`)
+  Downloaded num_enum v0.7.6 (registry `rsproxy-sparse`)
+  Downloaded num-rational v0.4.2 (registry `rsproxy-sparse`)
+  Downloaded num-integer v0.1.46 (registry `rsproxy-sparse`)
+  Downloaded num-derive v0.4.2 (registry `rsproxy-sparse`)
+  Downloaded memoffset v0.9.1 (registry `rsproxy-sparse`)
+  Downloaded maybe-rayon v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded litemap v0.8.2 (registry `rsproxy-sparse`)
+  Downloaded linked_hash_set v0.1.6 (registry `rsproxy-sparse`)
+  Downloaded icu_provider v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded grid v1.0.0 (registry `rsproxy-sparse`)
+  Downloaded glutin v0.32.3 (registry `rsproxy-sparse`)
+  Downloaded gif v0.14.2 (registry `rsproxy-sparse`)
+  Downloaded generativity v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded font-types v0.11.2 (registry `rsproxy-sparse`)
+  Downloaded euclid v0.22.14 (registry `rsproxy-sparse`)
+  Downloaded derive_utils v0.15.1 (registry `rsproxy-sparse`)
+  Downloaded derive_more-impl v2.1.1 (registry `rsproxy-sparse`)
+  Downloaded bincode v2.0.1 (registry `rsproxy-sparse`)
+  Downloaded quote v1.0.45 (registry `rsproxy-sparse`)
+  Downloaded quick-error v2.0.1 (registry `rsproxy-sparse`)
+  Downloaded profiling v1.0.17 (registry `rsproxy-sparse`)
+  Downloaded proc-macro-crate v3.5.0 (registry `rsproxy-sparse`)
+  Downloaded pico-args v0.5.0 (registry `rsproxy-sparse`)
+  Downloaded parlance v0.1.0 (registry `rsproxy-sparse`)
+  Downloaded once_cell v1.21.4 (registry `rsproxy-sparse`)
+  Downloaded num_enum_derive v0.7.6 (registry `rsproxy-sparse`)
+  Downloaded noop_proc_macro v0.3.0 (registry `rsproxy-sparse`)
+  Downloaded memmap2 v0.9.10 (registry `rsproxy-sparse`)
+  Downloaded lyon_geom v1.0.19 (registry `rsproxy-sparse`)
+  Downloaded windows-sys v0.52.0 (registry `rsproxy-sparse`)
+  Downloaded linked-hash-map v0.5.6 (registry `rsproxy-sparse`)
+  Downloaded libloading v0.8.9 (registry `rsproxy-sparse`)
+  Downloaded lebe v0.5.3 (registry `rsproxy-sparse`)
+  Downloaded jobserver v0.1.34 (registry `rsproxy-sparse`)
+  Downloaded itoa v1.0.18 (registry `rsproxy-sparse`)
+  Downloaded include_dir_macros v0.7.4 (registry `rsproxy-sparse`)
+  Downloaded imagesize v0.14.0 (registry `rsproxy-sparse`)
+  Downloaded icu_properties v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded icu_locale v2.2.0 (registry `rsproxy-sparse`)
+  Downloaded htmlparser v0.2.1 (registry `rsproxy-sparse`)
+  Downloaded glutin_wgl_sys v0.6.1 (registry `rsproxy-sparse`)
+  Downloaded glutin-winit v0.5.0 (registry `rsproxy-sparse`)
+  Downloaded getrandom v0.4.2 (registry `rsproxy-sparse`)
+  Downloaded getopts v0.2.24 (registry `rsproxy-sparse`)
+  Downloaded fontique v0.8.0 (registry `rsproxy-sparse`)
+  Downloaded foldhash v0.2.0 (registry `rsproxy-sparse`)
+  Downloaded float-cmp v0.9.0 (registry `rsproxy-sparse`)
+  Downloaded filetime v0.2.27 (registry `rsproxy-sparse`)
+  Downloaded field-offset v0.3.6 (registry `rsproxy-sparse`)
+  Downloaded fax v0.2.6 (registry `rsproxy-sparse`)
+  Downloaded equator-macro v0.4.2 (registry `rsproxy-sparse`)
+  Downloaded equator v0.4.2 (registry `rsproxy-sparse`)
+  Downloaded core_maths v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded core2 v0.4.0 (registry `rsproxy-sparse`)
+  Downloaded copypasta v0.10.2 (registry `rsproxy-sparse`)
+  Downloaded convert_case v0.10.0 (registry `rsproxy-sparse`)
+  Downloaded clipboard-win v5.4.1 (registry `rsproxy-sparse`)
+  Downloaded clang-sys v1.8.1 (registry `rsproxy-sparse`)
+  Downloaded chrono v0.4.44 (registry `rsproxy-sparse`)
+  Downloaded cexpr v0.6.0 (registry `rsproxy-sparse`)
+  Downloaded byteorder-lite v0.1.0 (registry `rsproxy-sparse`)
+  Downloaded by_address v1.2.1 (registry `rsproxy-sparse`)
+  Downloaded bumpalo v3.20.2 (registry `rsproxy-sparse`)
+  Downloaded built v0.8.0 (registry `rsproxy-sparse`)
+  Downloaded borsh v1.6.1 (registry `rsproxy-sparse`)
+  Downloaded bitstream-io v4.9.0 (registry `rsproxy-sparse`)
+  Downloaded bitflags v2.11.0 (registry `rsproxy-sparse`)
+  Downloaded bit_field v0.10.3 (registry `rsproxy-sparse`)
+  Downloaded bindgen v0.72.1 (registry `rsproxy-sparse`)
+  Downloaded av1-grain v0.2.5 (registry `rsproxy-sparse`)
+  Downloaded arrayvec v0.7.6 (registry `rsproxy-sparse`)
+  Downloaded anyhow v1.0.102 (registry `rsproxy-sparse`)
+  Downloaded aligned-vec v0.6.4 (registry `rsproxy-sparse`)
+  Downloaded aligned v0.4.3 (registry `rsproxy-sparse`)
+  Downloaded accesskit_winit v0.30.0 (registry `rsproxy-sparse`)
+  Downloaded accesskit v0.22.0 (registry `rsproxy-sparse`)
+  Downloaded integer-sqrt v0.1.5 (registry `rsproxy-sparse`)
+  Downloaded include_dir v0.7.4 (registry `rsproxy-sparse`)
+  Downloaded half v2.7.1 (registry `rsproxy-sparse`)
+  Downloaded gl_generator v0.14.0 (registry `rsproxy-sparse`)
+  Downloaded fax_derive v0.2.0 (registry `rsproxy-sparse`)
+  Downloaded fastrand v2.4.1 (registry `rsproxy-sparse`)
+  Downloaded either v1.15.0 (registry `rsproxy-sparse`)
+  Downloaded derive_more v2.1.1 (registry `rsproxy-sparse`)
+  Downloaded cursor-icon v1.2.0 (registry `rsproxy-sparse`)
+  Downloaded crossbeam-epoch v0.9.18 (registry `rsproxy-sparse`)
+  Downloaded crossbeam-deque v0.8.6 (registry `rsproxy-sparse`)
+  Downloaded critical-section v1.2.0 (registry `rsproxy-sparse`)
+  Downloaded color_quant v1.1.0 (registry `rsproxy-sparse`)
+  Downloaded bytemuck_derive v1.10.2 (registry `rsproxy-sparse`)
+  Downloaded bytemuck v1.25.0 (registry `rsproxy-sparse`)
+  Downloaded avif-serialize v0.8.8 (registry `rsproxy-sparse`)
+  Downloaded av-scenechange v0.14.1 (registry `rsproxy-sparse`)
+  Downloaded as-slice v0.2.1 (registry `rsproxy-sparse`)
+  Downloaded accesskit_windows v0.30.0 (registry `rsproxy-sparse`)
+  Downloaded accesskit_consumer v0.32.0 (registry `rsproxy-sparse`)
+  Downloaded linebender_resource_handle v0.1.1 (registry `rsproxy-sparse`)
+  Downloaded itertools v0.14.0 (registry `rsproxy-sparse`)
+  Downloaded windows v0.62.2 (registry `rsproxy-sparse`)
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling libm v0.2.16
+   Compiling autocfg v1.5.0
+   Compiling stable_deref_trait v1.2.1
+   Compiling serde_core v1.0.228
+   Compiling arrayvec v0.7.6
+   Compiling smallvec v1.15.1
+   Compiling writeable v0.6.3
+   Compiling windows-link v0.2.1
+   Compiling cfg-if v1.0.4
+   Compiling litemap v0.8.2
+   Compiling memchr v2.8.0
+   Compiling log v0.4.29
+   Compiling utf8_iter v1.0.4
+   Compiling crossbeam-utils v0.8.21
+   Compiling anyhow v1.0.102
+   Compiling simd-adler32 v0.3.9
+   Compiling icu_properties_data v2.2.0
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling num-traits v0.2.19
+   Compiling crc32fast v1.5.0
+   Compiling adler2 v2.0.1
+   Compiling thiserror v2.0.18
+   Compiling icu_normalizer_data v2.2.0
+   Compiling version_check v0.9.5
+   Compiling zmij v1.0.21
+   Compiling windows-link v0.1.3
+   Compiling hashbrown v0.16.1
+   Compiling either v1.15.0
+   Compiling miniz_oxide v0.8.9
+   Compiling rayon-core v1.13.0
+   Compiling slotmap v1.1.1
+   Compiling windows-threading v0.2.1
+   Compiling zerocopy v0.8.48
+   Compiling serde_json v1.0.149
+   Compiling semver v1.0.28
+   Compiling heck v0.5.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling core_maths v0.1.1
+   Compiling flate2 v1.1.9
+   Compiling syn v2.0.117
+   Compiling memoffset v0.9.1
+   Compiling as-slice v0.2.1
+   Compiling rustc_version v0.4.1
+   Compiling crossbeam-deque v0.8.6
+   Compiling unicode-segmentation v1.13.2
+   Compiling winnow v1.0.1
+   Compiling libc v0.2.184
+   Compiling quick-error v2.0.1
+   Compiling portable-atomic v1.13.1
+   Compiling itoa v1.0.18
+   Compiling num-integer v0.1.46
+   Compiling euclid v0.22.14
+   Compiling paste v1.0.15
+   Compiling float-cmp v0.9.0
+   Compiling icu_locale_data v2.2.0
+   Compiling av-scenechange v0.14.1
+   Compiling built v0.8.0
+   Compiling num-bigint v0.4.6
+   Compiling strict-num v0.1.1
+   Compiling rayon v1.11.0
+   Compiling convert_case v0.10.0
+   Compiling toml_parser v1.1.2+spec-1.1.0
+   Compiling lyon_geom v1.0.19
+   Compiling field-offset v0.3.6
+   Compiling rav1e v0.8.1
+   Compiling aligned v0.4.3
+   Compiling ttf-parser v0.25.1
+   Compiling itertools v0.14.0
+   Compiling bitflags v2.11.0
+   Compiling num-rational v0.4.2
+   Compiling windows-result v0.3.4
+   Compiling windows-strings v0.4.2
+   Compiling nom v8.0.0
+   Compiling core2 v0.4.0
+   Compiling fdeflate v0.3.7
+   Compiling weezl v0.1.12
+   Compiling pulldown-cmark v0.13.3
+   Compiling memmap2 v0.9.10
+   Compiling linebender_resource_handle v0.1.1
+   Compiling y4m v0.8.0
+   Compiling zune-core v0.5.1
+   Compiling critical-section v1.2.0
+   Compiling unicode-width v0.2.2
+   Compiling hashbrown v0.17.0
+   Compiling arrayref v0.3.9
+   Compiling parlance v0.1.0
+   Compiling unicode-xid v0.2.6
+   Compiling pastey v0.1.1
+   Compiling icu_segmenter_data v2.2.0
+   Compiling tinyvec_macros v0.1.1
+   Compiling zune-jpeg v0.5.15
+   Compiling getopts v0.2.24
+   Compiling tinyvec v1.11.0
+   Compiling png v0.18.1
+   Compiling bitstream-io v4.9.0
+   Compiling indexmap v2.14.0
+   Compiling lyon_path v1.0.19
+   Compiling simd_helpers v0.1.0
+   Compiling kurbo v0.13.0
+   Compiling maybe-rayon v0.1.1
+   Compiling imgref v1.12.0
+   Compiling unicode-ccc v0.4.0
+   Compiling color_quant v1.1.0
+   Compiling new_debug_unreachable v1.0.6
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling siphasher v1.0.2
+   Compiling unicode-script v0.5.8
+   Compiling byteorder-lite v0.1.0
+   Compiling unicase v2.9.0
+   Compiling raw-window-handle v0.6.2
+   Compiling pulldown-cmark-escape v0.11.0
+   Compiling cfg_aliases v0.2.1
+   Compiling noop_proc_macro v0.3.0
+   Compiling unicode-bidi-mirroring v0.4.0
+   Compiling data-url v0.3.2
+   Compiling unicode-properties v0.1.4
+   Compiling image-webp v0.2.4
+   Compiling svgtypes v0.16.1
+   Compiling gif v0.14.2
+   Compiling loop9 v0.1.5
+   Compiling roxmltree v0.21.1
+   Compiling zune-inflate v0.2.54
+   Compiling simplecss v0.2.2
+   Compiling avif-serialize v0.8.8
+   Compiling unicode-bidi v0.3.18
+   Compiling unicode-vo v0.1.0
+   Compiling base64 v0.22.1
+   Compiling lebe v0.5.3
+   Compiling htmlparser v0.2.1
+   Compiling fontdb v0.23.0
+   Compiling pxfm v0.1.28
+   Compiling pico-args v0.5.0
+   Compiling imagesize v0.14.0
+   Compiling xmlwriter v0.1.0
+   Compiling bit_field v0.10.3
+   Compiling static_assertions v1.1.0
+   Compiling windows_x86_64_msvc v0.53.1
+   Compiling once_cell v1.21.4
+   Compiling windows-threading v0.1.0
+   Compiling yazi v0.2.1
+   Compiling serde v1.0.228
+   Compiling percent-encoding v2.3.2
+   Compiling pin-project-lite v0.2.17
+   Compiling zeno v0.3.3
+   Compiling tracing-core v0.1.36
+   Compiling windows-targets v0.52.6
+   Compiling form_urlencoded v1.2.2
+   Compiling winit v0.30.13
+   Compiling lyon_algorithms v1.0.19
+   Compiling taffy v0.9.2
+   Compiling chrono v0.4.44
+   Compiling clru v0.6.3
+   Compiling tracing v0.1.44
+   Compiling scoped-tls-hkt v0.1.5
+   Compiling getrandom v0.4.2
+   Compiling accesskit v0.22.0
+   Compiling pin-weak v1.1.0
+   Compiling slab v0.4.12
+   Compiling tr v0.1.11
+   Compiling dpi v0.1.2
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling unicode-linebreak v0.1.5
+   Compiling scopeguard v1.2.0
+   Compiling i-slint-common v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\common)
+   Compiling sys-locale v0.3.2
+   Compiling toml_edit v0.25.11+spec-1.1.0
+   Compiling accesskit_consumer v0.32.0
+   Compiling windows-targets v0.53.5
+   Compiling windows-sys v0.52.0
+   Compiling rustversion v1.0.22
+   Compiling error-code v3.3.2
+   Compiling smol_str v0.2.2
+   Compiling cursor-icon v1.2.0
+   Compiling clipboard-win v5.4.1
+   Compiling windows-sys v0.61.2
+   Compiling windows-sys v0.60.2
+   Compiling proc-macro-crate v3.5.0
+   Compiling i-slint-backend-winit v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\backends\winit)
+   Compiling serde_spanned v1.1.1
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling integer-sqrt v0.1.5
+   Compiling crossbeam-channel v0.5.15
+   Compiling fastrand v2.4.1
+   Compiling winnow v0.7.15
+   Compiling cbindgen v0.29.2
+   Compiling tempfile v3.27.0
+   Compiling copypasta v0.10.2
+   Compiling i-slint-backend-selector v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\backends\selector)
+   Compiling hashbrown v0.14.5
+   Compiling countme v3.0.1
+   Compiling linked-hash-map v0.5.6
+   Compiling rustc-hash v1.1.0
+   Compiling i-slint-compiler v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\compiler)
+   Compiling text-size v1.1.1
+   Compiling linked_hash_set v0.1.6
+   Compiling include_dir_macros v0.7.4
+   Compiling typed-index-collections v3.3.0
+   Compiling pin-utils v0.1.0
+   Compiling i-slint-backend-testing v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\backends\testing)
+   Compiling moxcms v0.8.1
+   Compiling softbuffer v0.4.8
+   Compiling rowan v0.16.1
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling by_address v1.2.1
+   Compiling smol_str v0.3.2
+   Compiling spin_on v0.1.1
+   Compiling include_dir v0.7.4
+   Compiling generativity v1.1.0
+   Compiling synstructure v0.13.2
+   Compiling derive_utils v0.15.1
+   Compiling zerofrom-derive v0.1.7
+   Compiling yoke-derive v0.8.2
+   Compiling bytemuck_derive v1.10.2
+   Compiling zerovec-derive v0.11.3
+   Compiling displaydoc v0.2.5
+   Compiling zerofrom v0.1.7
+   Compiling yoke v0.8.2
+   Compiling bytemuck v1.25.0
+   Compiling zerovec v0.11.6
+   Compiling windows-interface v0.59.3
+   Compiling windows-implement v0.60.2
+   Compiling zerotrie v0.2.4
+   Compiling tinystr v0.8.3
+   Compiling potential_utf v0.1.5
+   Compiling font-types v0.11.2
+   Compiling windows-core v0.62.2
+   Compiling icu_locale_core v2.2.0
+   Compiling thiserror-impl v2.0.18
+   Compiling icu_collections v2.2.0
+   Compiling equator-macro v0.4.2
+   Compiling read-fonts v0.37.0
+   Compiling windows-future v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling windows-collections v0.3.2
+   Compiling zerocopy-derive v0.8.48
+   Compiling icu_provider v2.2.0
+   Compiling windows v0.62.2
+   Compiling arg_enum_proc_macro v0.3.4
+   Compiling serde_derive v1.0.228
+   Compiling profiling-procmacros v1.0.17
+   Compiling windows-core v0.61.2
+   Compiling tiny-skia-path v0.12.0
+   Compiling rgb v0.8.53
+   Compiling equator v0.4.2
+   Compiling num-derive v0.4.2
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling aligned-vec v0.6.4
+   Compiling derive_more-impl v2.1.1
+   Compiling v_frame v0.3.9
+   Compiling profiling v1.0.17
+   Compiling fax_derive v0.2.0
+   Compiling icu_locale v2.2.0
+   Compiling av1-grain v0.2.5
+   Compiling rustybuzz v0.20.1
+   Compiling strum_macros v0.28.0
+   Compiling const-field-offset-macro v0.2.0 (E:\gitHub\GoldView\build\_deps\slint-src\helper_crates\const-field-offset\macro)
+   Compiling idna_adapter v1.2.1
+   Compiling parley_data v0.8.0
+   Compiling lyon_extra v1.1.0
+   Compiling icu_segmenter v2.2.0
+   Compiling tiny-skia v0.12.0
+   Compiling fax v0.2.6
+   Compiling qoi v0.4.1
+   Compiling const-field-offset v0.2.0 (E:\gitHub\GoldView\build\_deps\slint-src\helper_crates\const-field-offset)
+   Compiling vtable-macro v0.4.0 (E:\gitHub\GoldView\build\_deps\slint-src\helper_crates\vtable\macro)
+   Compiling pin-project-internal v1.1.11
+   Compiling usvg v0.47.0
+   Compiling idna v1.1.0
+   Compiling windows-future v0.2.1
+   Compiling vtable v0.4.0 (E:\gitHub\GoldView\build\_deps\slint-src\helper_crates\vtable)
+   Compiling windows-collections v0.2.0
+   Compiling windows-numerics v0.2.0
+   Compiling skrifa v0.40.0
+   Compiling half v2.7.1
+   Compiling fontique v0.8.0
+   Compiling ravif v0.13.0
+   Compiling harfrust v0.5.2
+   Compiling resvg v0.47.0
+   Compiling i-slint-core-macros v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\core-macros)
+   Compiling auto_enums v0.8.8
+   Compiling windows v0.61.3
+   Compiling exr v1.74.0
+   Compiling tiff v0.11.3
+   Compiling pin-project v1.1.11
+   Compiling derive_more v2.1.1
+   Compiling url v2.5.8
+   Compiling strum v0.28.0
+   Compiling num_enum_derive v0.7.6
+   Compiling keyboard-types v0.7.0
+   Compiling webbrowser v1.2.0
+   Compiling muda v0.18.0
+   Compiling num_enum v0.7.6
+   Compiling swash v0.2.7
+   Compiling image v0.25.10
+   Compiling parley v0.8.0
+   Compiling i-slint-core v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\core)
+   Compiling slint-cpp v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\api\cpp)
+   Compiling i-slint-renderer-software v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\renderers\software)
+   Compiling accesskit_windows v0.30.0
+   Compiling accesskit_winit v0.30.0
+   Compiling slint-interpreter v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\interpreter)
+    Finished `release` profile [optimized] target(s) in 10m 24s
+Copying byproducts `slint_cpp.dll.lib` to E:/gitHub/GoldView/build/_deps/slint-build
+Copying byproducts `slint_cpp.dll` to E:/gitHub/GoldView/build/_deps/slint-build
+Copying byproducts `slint_cpp.pdb` to E:/gitHub/GoldView/build/_deps/slint-build
+[  0%] Built target _cargo-build_slint_cpp
+[  0%] Built target cargo-build_slint_cpp
+[  5%] Building CXX object CMakeFiles/GoldViewNative.dir/src/app/main.cpp.obj
+main.cpp
+[ 10%] Building CXX object CMakeFiles/GoldViewNative.dir/src/app/app.cpp.obj
+app.cpp
+E:\gitHub\GoldView\build\_deps\slint-build\generated_include\private/slint_internal.h(423): warning C4624: “slint::cbindgen_private::AccessibilityAction”: 已将析构函数隐式定义为“已删除”
+[ 15%] Building CXX object CMakeFiles/GoldViewNative.dir/src/app/app_tray.cpp.obj
+app_tray.cpp
+[ 21%] Building CXX object CMakeFiles/GoldViewNative.dir/src/app/app_layout.cpp.obj
+app_layout.cpp
+[ 26%] Building CXX object CMakeFiles/GoldViewNative.dir/src/app/app_window.cpp.obj
+app_window.cpp
+E:\gitHub\GoldView\build\_deps\slint-build\generated_include\private/slint_internal.h(423): warning C4624: “slint::cbindgen_private::AccessibilityAction”: 已将析构函数隐式定义为“已删除”
+[ 31%] Building CXX object CMakeFiles/GoldViewNative.dir/src/utils/icon_utils.cpp.obj
+icon_utils.cpp
+[ 36%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/price_service.cpp.obj
+price_service.cpp
+[ 42%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/source_manager.cpp.obj
+source_manager.cpp
+[ 47%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/source_manager_tick.cpp.obj
+source_manager_tick.cpp
+[ 52%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/source_manager_health.cpp.obj
+source_manager_health.cpp
+[ 57%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/source_manager_selection.cpp.obj
+source_manager_selection.cpp
+[ 63%] Building CXX object CMakeFiles/GoldViewNative.dir/src/pricing/quote_source.cpp.obj
+quote_source.cpp
+[ 68%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_topology_detector.cpp.obj
+taskbar_topology_detector.cpp
+[ 73%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_tray_detector.cpp.obj
+taskbar_tray_detector.cpp
+[ 78%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_metrics.cpp.obj
+taskbar_metrics.cpp
+[ 84%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_anchor_resolver.cpp.obj
+taskbar_anchor_resolver.cpp
+[ 89%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_slot_controller.cpp.obj
+taskbar_slot_controller.cpp
+[ 94%] Building CXX object CMakeFiles/GoldViewNative.dir/src/taskbar/taskbar_host.cpp.obj
+taskbar_host.cpp
+[100%] Linking CXX executable GoldViewNative.exe
+[100%] Built target GoldViewNative
+[100%] Built target cargo-prebuild_slint-compiler
+   Compiling stable_deref_trait v1.2.1
+   Compiling bitflags v2.11.0
+   Compiling writeable v0.6.3
+   Compiling litemap v0.8.2
+   Compiling slotmap v1.1.1
+   Compiling windows-sys v0.61.2
+   Compiling zerofrom v0.1.7
+   Compiling anstyle v1.0.14
+   Compiling rav1e v0.8.1
+   Compiling read-fonts v0.37.0
+   Compiling maybe-rayon v0.1.1
+   Compiling utf8parse v0.2.2
+   Compiling once_cell_polyfill v1.70.2
+   Compiling zmij v1.0.21
+   Compiling hashbrown v0.16.1
+   Compiling serde v1.0.228
+   Compiling as-slice v0.2.1
+   Compiling yoke v0.8.2
+   Compiling windows v0.62.2
+   Compiling aligned v0.4.3
+   Compiling png v0.18.1
+   Compiling anstyle-parse v1.0.0
+   Compiling rustybuzz v0.20.1
+   Compiling snafu-derive v0.8.9
+   Compiling proc-macro2 v1.0.106
+   Compiling rspolib v0.1.2
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling zerovec v0.11.6
+   Compiling zerotrie v0.2.4
+   Compiling av-scenechange v0.14.1
+   Compiling unicode-ident v1.0.24
+   Compiling colorchoice v1.0.5
+   Compiling pulldown-cmark v0.13.3
+   Compiling anstyle-query v1.1.5
+   Compiling anstyle-wincon v3.0.11
+   Compiling terminal_size v0.4.4
+   Compiling anstream v1.0.0
+   Compiling exr v1.74.0
+   Compiling serde_json v1.0.149
+   Compiling derive_more v2.1.1
+   Compiling quote v1.0.45
+   Compiling fontdb v0.23.0
+   Compiling tiny-skia v0.12.0
+   Compiling clap_lex v1.1.0
+   Compiling lazy_static v1.5.0
+   Compiling tinystr v0.8.3
+   Compiling potential_utf v0.1.5
+   Compiling i-slint-compiler v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\compiler)
+   Compiling icu_locale_core v2.2.0
+   Compiling icu_collections v2.2.0
+   Compiling natord v1.0.9
+   Compiling itoa v1.0.18
+   Compiling strsim v0.11.1
+   Compiling smol_str v0.3.2
+   Compiling clap_builder v4.6.0
+   Compiling usvg v0.47.0
+   Compiling annotate-snippets v0.12.15
+   Compiling icu_provider v2.2.0
+   Compiling clap_derive v4.6.0
+   Compiling pathdiff v0.2.3
+   Compiling snafu v0.8.9
+   Compiling icu_properties v2.2.0
+   Compiling icu_normalizer v2.2.0
+   Compiling idna_adapter v1.2.1
+   Compiling idna v1.1.0
+   Compiling resvg v0.47.0
+   Compiling url v2.5.8
+   Compiling clap v4.6.0
+   Compiling ravif v0.13.0
+   Compiling skrifa v0.40.0
+   Compiling fontique v0.8.0
+   Compiling image v0.25.10
+   Compiling swash v0.2.7
+   Compiling i-slint-common v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\internal\common)
+   Compiling slint-compiler v1.16.0 (E:\gitHub\GoldView\build\_deps\slint-src\tools\compiler)
+    Finished `release` profile [optimized] target(s) in 3m 00s
+Copying byproducts `slint-compiler.exe` to E:/gitHub/GoldView/build/_deps/slint-build
+Copying byproducts `slint_compiler.pdb` to E:/gitHub/GoldView/build/_deps/slint-build
+[100%] Built target _cargo-build_slint-compiler
+[100%] Built target cargo-build_slint-compiler
+[build_native] Publish completed: e:\gitHub\GoldView\dist\GoldViewNative
