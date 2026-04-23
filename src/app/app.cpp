@@ -1,8 +1,14 @@
 #include "app.h"
 
+#include <slint.h>
+
 #include <commctrl.h>
+
+#include <array>
 #include <ctime>
+#include <filesystem>
 #include <shellapi.h>
+#include <system_error>
 
 #include "icon_utils.h"
 
@@ -23,7 +29,7 @@ bool isWorkday() {
 #else
     localTime = *std::localtime(&now);
 #endif
-    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // 0 表示周日，1 到 5 表示周一到周五，6 表示周六
     return localTime.tm_wday >= 1 && localTime.tm_wday <= 5;
 }
 
@@ -36,25 +42,52 @@ bool parseCommandLineForAutoStart(LPWSTR* argv, int argc) {
     return false;
 }
 
+std::filesystem::path executableDirectory(HINSTANCE instanceHandle) {
+    wchar_t modulePath[MAX_PATH]{};
+    GetModuleFileNameW(instanceHandle, modulePath, MAX_PATH);
+    return std::filesystem::path(modulePath).parent_path();
 }
 
+std::wstring canonicalPath(const std::filesystem::path& path) {
+    std::error_code error;
+    const auto normalized = std::filesystem::weakly_canonical(path, error);
+    return (error ? path : normalized).wstring();
+}
+
+std::wstring resolveCalculatorPagePath(HINSTANCE instanceHandle) {
+    const auto moduleDir = executableDirectory(instanceHandle);
+    const std::array<std::filesystem::path, 3> candidates{
+        moduleDir / L"assets" / L"calculator" / L"index.html",
+        moduleDir / L".." / L"assets" / L"calculator" / L"index.html",
+        std::filesystem::current_path() / L"assets" / L"calculator" / L"index.html",
+    };
+
+    for (const auto& candidate : candidates) {
+        std::error_code error;
+        if (std::filesystem::exists(candidate, error) && !error) {
+            return canonicalPath(candidate);
+        }
+    }
+
+    return canonicalPath(candidates.front());
+}
+
+}  // namespace
+
 App::App(HINSTANCE instanceHandle)
-    : instanceHandle_(instanceHandle),
-      settingsStore_(instanceHandle) {}
+    : instanceHandle_(instanceHandle) {}
 
 App::~App() {
     shutdown();
 }
 
 bool App::initialize(int argc, wchar_t* argv[]) {
-    // Detect autostart launch via --autostart argument
+    // 通过命令行参数识别是否为自启动拉起
     autoStartLaunch_ = parseCommandLineForAutoStart(argv, argc);
+    settings_.runtime.launchAtStartup = isLaunchAtStartupEnabled();
 
-    settings_ = settingsStore_.load();
-
-    // Only check workday restriction when launched via autostart (not manual launch)
+    // 仅在系统自启动时检查工作日限制，手动启动不拦截
     if (autoStartLaunch_ && settings_.runtime.launchAtStartup && settings_.runtime.launchOnWorkdaysOnly && !isWorkday()) {
-        taskbarLogger_.info(L"Skipping autostart on non-workday (weekend)");
         return false;
     }
 
@@ -62,11 +95,6 @@ bool App::initialize(int argc, wchar_t* argv[]) {
     commonControls.dwSize = sizeof(commonControls);
     commonControls.dwICC = ICC_TAB_CLASSES | ICC_STANDARD_CLASSES;
     InitCommonControlsEx(&commonControls);
-
-    settings_ = settingsStore_.load();
-    settings_.runtime.launchAtStartup = isLaunchAtStartupEnabled();
-    settingsStore_.save(settings_);
-    taskbarLogger_.info(L"Initializing GoldView native runtime");
 
     WNDCLASSEXW windowClass{};
     windowClass.cbSize = sizeof(windowClass);
@@ -91,29 +119,18 @@ bool App::initialize(int argc, wchar_t* argv[]) {
         instanceHandle_,
         this);
     if (!hiddenWindow_) {
-        taskbarLogger_.error(L"Failed to create hidden window");
         return false;
     }
 
     taskbarHost_ = std::make_unique<TaskbarHost>();
-    calculatorWindow_ = std::make_unique<CalculatorWindow>(averageService_);
-    settingsWindow_ = std::make_unique<SettingsWindow>();
     if (!taskbarHost_->create(instanceHandle_)) {
-        taskbarLogger_.error(L"Failed to create window hosts");
         return false;
     }
-
-    settingsWindow_->setSettings(settings_);
-    settingsWindow_->setStatus(priceService_.currentStatus());
-    settingsWindow_->setSettingsSavedCallback([this](const AppSettings& settings) {
-        applySettings(settings);
-    });
 
     createTrayIcon();
     rebuildMode();
     priceService_.updateSettings(settings_);
     enableUiRefreshTimer();
-    refreshSettingsWindow();
 
     priceService_.start([this](const PriceSnapshot& snapshot) {
         if (hiddenWindow_) {
@@ -126,16 +143,11 @@ bool App::initialize(int argc, wchar_t* argv[]) {
 }
 
 int App::run() {
-    MSG message{};
-    while (GetMessageW(&message, nullptr, 0, 0)) {
-        TranslateMessage(&message);
-        DispatchMessageW(&message);
-    }
-    return static_cast<int>(message.wParam);
+    slint::run_event_loop(slint::EventLoopMode::RunUntilQuit);
+    return 0;
 }
 
 void App::shutdown() {
-    taskbarLogger_.info(L"Shutting down GoldView native runtime");
     disableTaskbarRecoveryTimer();
     disableUiRefreshTimer();
     priceService_.stop();
@@ -145,12 +157,6 @@ void App::shutdown() {
         taskbarHost_->detachFromTaskbarContainer();
         taskbarHost_->hide();
     }
-    if (calculatorWindow_) {
-        calculatorWindow_->destroy();
-    }
-    if (settingsWindow_) {
-        settingsWindow_->destroy();
-    }
     if (hiddenWindow_) {
         DestroyWindow(hiddenWindow_);
         hiddenWindow_ = nullptr;
@@ -159,18 +165,9 @@ void App::shutdown() {
 
 void App::rebuildMode() {
     taskbarHost_->hide();
-
-    taskbarLogger_.info(L"Rebuilding fixed taskbar display");
     enableTaskbarRecoveryTimer();
     activeHost_ = static_cast<HostWindow*>(taskbarHost_.get());
-    const auto refresh = refreshTaskbarLayout();
-    if (refresh.shown && activeHost_) {
-        activeHost_->show();
-        activeHost_->updateContent(lastSnapshot_, settings_.display);
-    } else {
-        taskbarLogger_.warn(L"Fixed taskbar display hidden: " + refresh.failureReason);
-        activeHost_ = nullptr;
-    }
+    syncTaskbarDisplay(true);
 }
 
 void App::resetTaskbarModeState() {
@@ -178,76 +175,44 @@ void App::resetTaskbarModeState() {
     lastTaskbarContainer_ = nullptr;
 }
 
-void App::applySnapshot(const PriceSnapshot& snapshot) {
-    lastSnapshot_ = snapshot;
+bool App::shouldSyncTaskbarFromSnapshot(const PriceSnapshot& snapshot) const {
+    const double nextDisplayedPrice = normalizeDisplayedPrice(snapshot.currentPrice);
+    const double currentDisplayedPrice = normalizeDisplayedPrice(lastSnapshot_.currentPrice);
+    return nextDisplayedPrice != currentDisplayedPrice;
+}
+
+void App::syncTaskbarDisplay(bool forceLayoutRefresh) {
+    if (!taskbarHost_) {
+        return;
+    }
+
+    const bool needLayoutRefresh = forceLayoutRefresh ||
+        taskbarRefreshFailureCount_ > 0 ||
+        !taskbarHost_->isAttachedToTaskbarContainer(lastTaskbarContainer_);
+    if (needLayoutRefresh) {
+        const auto refresh = refreshTaskbarLayout();
+        if (!refresh.shown) {
+            return;
+        }
+    }
+
     if (activeHost_) {
-        activeHost_->updateContent(snapshot, settings_.display);
-    }
-    refreshSettingsWindow();
-}
-
-void App::showCalculatorWindow() {
-    if (calculatorWindow_) {
-        if (!calculatorWindow_->isCreated()) {
-            calculatorWindow_->create(instanceHandle_);
-        }
-        calculatorWindow_->focusOrShow();
-    }
-}
-
-void App::showSettingsWindow() {
-    if (settingsWindow_) {
-        taskbarLogger_.info(L"Opening source control window");
-        if (!settingsWindow_->isCreated()) {
-            taskbarLogger_.info(L"Creating source control window on demand");
-            settingsWindow_->create(instanceHandle_);
-            settingsWindow_->setSettings(settings_);
-            settingsWindow_->setStatus(priceService_.currentStatus());
-            settingsWindow_->setSettingsSavedCallback([this](const AppSettings& settings) {
-                applySettings(settings);
-            });
-        }
-        taskbarLogger_.info(L"Focusing source control window");
-        settingsWindow_->focusOrShow();
-    }
-}
-
-void App::applySettings(const AppSettings& settings) {
-    settings_ = settings;
-    syncLaunchAtStartup();
-    settingsStore_.save(settings_);
-    priceService_.updateSettings(settings_);
-    enableUiRefreshTimer();
-
-    if (taskbarHost_) {
-        taskbarHost_->updateContent(lastSnapshot_, settings_.display);
-    }
-
-    const auto refresh = refreshTaskbarLayout();
-    if (refresh.shown && activeHost_) {
         activeHost_->show();
         activeHost_->updateContent(lastSnapshot_, settings_.display);
     }
-    refreshSettingsWindow();
 }
 
-void App::refreshSettingsWindow() {
-    if (settingsWindow_) {
-        settingsWindow_->setSettings(settings_);
-        settingsWindow_->setStatus(priceService_.currentStatus());
-    }
+void App::applySnapshot(const PriceSnapshot& snapshot) {
+    lastSnapshot_ = snapshot;
+    syncTaskbarDisplay(false);
 }
 
-bool App::syncLaunchAtStartup() {
-    const bool actual = isLaunchAtStartupEnabled();
-    if (actual == settings_.runtime.launchAtStartup) {
-        return true;
+void App::openCalculatorWebPage() {
+    const std::wstring pagePath = resolveCalculatorPagePath(instanceHandle_);
+    const HINSTANCE launchResult = ShellExecuteW(hiddenWindow_, L"open", pagePath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    if (reinterpret_cast<INT_PTR>(launchResult) <= 32) {
+        MessageBoxW(hiddenWindow_, L"打开均价计算网页失败，请检查 assets/calculator/index.html 是否存在。", L"GoldView", MB_OK | MB_ICONWARNING);
     }
-    if (!setLaunchAtStartupEnabled(settings_.runtime.launchAtStartup)) {
-        settings_.runtime.launchAtStartup = actual;
-        return false;
-    }
-    return true;
 }
 
 bool App::setLaunchAtStartupEnabled(bool enabled) {
@@ -263,7 +228,6 @@ bool App::setLaunchAtStartupEnabled(bool enabled) {
         &runKey,
         nullptr);
     if (openResult != ERROR_SUCCESS) {
-        taskbarLogger_.error(L"Failed to open startup registry key");
         return false;
     }
 
@@ -276,7 +240,9 @@ bool App::setLaunchAtStartupEnabled(bool enabled) {
         command += L"\" ";
         command += kAutoStartArg;
         const DWORD bytes = static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t));
-        success = RegSetValueExW(runKey, kStartupValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(command.c_str()), bytes) == ERROR_SUCCESS;
+        success =
+            RegSetValueExW(runKey, kStartupValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(command.c_str()), bytes) ==
+            ERROR_SUCCESS;
     } else {
         const LONG deleteResult = RegDeleteValueW(runKey, kStartupValueName);
         success = deleteResult == ERROR_SUCCESS || deleteResult == ERROR_FILE_NOT_FOUND;
@@ -285,13 +251,10 @@ bool App::setLaunchAtStartupEnabled(bool enabled) {
     RegCloseKey(runKey);
 
     if (!success) {
-        taskbarLogger_.error(enabled ? L"Failed to enable startup launch" : L"Failed to disable startup launch");
         return false;
     }
 
     settings_.runtime.launchAtStartup = enabled;
-    settingsStore_.save(settings_);
-    refreshSettingsWindow();
     return true;
 }
 
@@ -306,14 +269,6 @@ bool App::isLaunchAtStartupEnabled() const {
     const LONG queryResult = RegQueryValueExW(runKey, kStartupValueName, nullptr, &type, nullptr, nullptr);
     RegCloseKey(runKey);
     return queryResult == ERROR_SUCCESS && type == REG_SZ;
-}
-
-bool App::isAutoStartLaunch() const {
-    return autoStartLaunch_;
-}
-
-void App::setAutoStartLaunch(bool value) {
-    autoStartLaunch_ = value;
 }
 
 }  // namespace goldview

@@ -1,12 +1,13 @@
 #include "app.h"
 
+#include <slint.h>
+
 namespace goldview {
 
 namespace {
 
-constexpr UINT kMenuSettings = 2001;
 constexpr UINT kMenuLaunchAtStartup = 2002;
-constexpr UINT kMenuCalculator = 2003;
+constexpr UINT kMenuCalculatorWeb = 2003;
 constexpr UINT kMenuExit = 2099;
 constexpr UINT_PTR kTaskbarRecoveryTimer = 3001;
 constexpr UINT_PTR kUiRefreshTimer = 3002;
@@ -56,24 +57,21 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
             showTrayMenu();
         }
         if (lParam == WM_LBUTTONDBLCLK) {
-            showCalculatorWindow();
+            openCalculatorWebPage();
         }
         return 0;
     }
 
     if (message == WM_COMMAND) {
         switch (LOWORD(wParam)) {
-        case kMenuSettings:
-            showSettingsWindow();
-            return 0;
         case kMenuLaunchAtStartup:
             setLaunchAtStartupEnabled(!isLaunchAtStartupEnabled());
             return 0;
-        case kMenuCalculator:
-            showCalculatorWindow();
+        case kMenuCalculatorWeb:
+            openCalculatorWebPage();
             return 0;
         case kMenuExit:
-            PostQuitMessage(0);
+            slint::quit_event_loop();
             return 0;
         default:
             break;
@@ -94,26 +92,21 @@ LRESULT App::handleTrayMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
             const bool needRecovery = taskbarRefreshFailureCount_ > 0 ||
                 !taskbarHost_->isAttachedToTaskbarContainer(lastTaskbarContainer_);
             if (needRecovery) {
-                const auto refresh = refreshTaskbarLayout();
-                if (refresh.shown && activeHost_) {
-                    activeHost_->show();
-                    activeHost_->updateContent(lastSnapshot_, settings_.display);
-                }
+                syncTaskbarDisplay(false);
             }
         }
-        refreshSettingsWindow();
+        if (wParam == kUiRefreshTimer) {
+            const auto latestSnapshot = priceService_.currentSnapshot();
+            if (shouldSyncTaskbarFromSnapshot(latestSnapshot)) {
+                lastSnapshot_ = latestSnapshot;
+                syncTaskbarDisplay(false);
+            }
+        }
         return 0;
     }
 
     if (message == WM_DISPLAYCHANGE || message == WM_SETTINGCHANGE || message == WM_DPICHANGED) {
-        const auto refresh = refreshTaskbarLayout();
-        if (refresh.shown && activeHost_) {
-            activeHost_->show();
-            activeHost_->updateContent(lastSnapshot_, settings_.display);
-        } else if (!refresh.shown) {
-            taskbarLogger_.warn(L"Taskbar refresh did not show host: " + refresh.failureReason);
-        }
-        refreshSettingsWindow();
+        syncTaskbarDisplay(true);
         return 0;
     }
 

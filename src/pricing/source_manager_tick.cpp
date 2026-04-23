@@ -18,7 +18,6 @@ std::uint64_t unixNow() {
 bool SourceManager::tick(PriceSnapshot* snapshot) {
     QuoteSourceConfig primaryConfig{};
     QuoteSourceConfig probeConfig{};
-    bool autoRefreshEnabled = true;
     bool shouldPollPrimary = false;
     bool shouldPollProbe = false;
     std::wstring selectionReason;
@@ -26,15 +25,6 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        autoRefreshEnabled = settings_.runtime.autoRefreshEnabled;
-        if (!autoRefreshEnabled) {
-            currentSnapshot_.delayed = false;
-            if (snapshot) {
-                *snapshot = currentSnapshot_;
-            }
-            return false;
-        }
-
         const size_t selectedIndex = selectPreferredCandidateLocked(&selectionReason);
         if (selectedIndex < records_.size()) {
             primaryConfig = records_[selectedIndex].config;
@@ -42,17 +32,18 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
                 activeSource_ = primaryConfig.kind;
                 lastSwitchAt_ = unixNow();
                 lastSwitchReason_ = selectionReason;
-                appendLogLocked(RuntimeLogLevel::Info,
-                    L"Switched active source to " + std::wstring(quoteSourceLabel(activeSource_)) + L": " + selectionReason);
             }
-            shouldPollPrimary = unixNow() * 1000 >= records_[selectedIndex].lastRequestAt * 1000 + activeIntervalMs(records_[selectedIndex]);
+            shouldPollPrimary =
+                unixNow() * 1000 >=
+                records_[selectedIndex].lastRequestAt * 1000 + activeIntervalMs(records_[selectedIndex]);
         }
 
         for (size_t index = 0; index < records_.size(); ++index) {
-            if (records_[index].config.kind == activeSource_ || !records_[index].config.enabled) {
+            if (records_[index].config.kind == activeSource_) {
                 continue;
             }
-            if (unixNow() * 1000 >= records_[index].lastRequestAt * 1000 + standbyIntervalMs(records_[index])) {
+            if (unixNow() * 1000 >=
+                records_[index].lastRequestAt * 1000 + standbyIntervalMs(records_[index])) {
                 probeIndex = index;
                 probeConfig = records_[index].config;
                 shouldPollProbe = true;
@@ -61,7 +52,7 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
         }
     }
 
-    auto fetchConfig = [&](const QuoteSourceConfig& config, bool allowSwitch, bool logFailure, PriceSnapshot* fetchedSnapshot) {
+    auto fetchConfig = [&](const QuoteSourceConfig& config, bool allowSwitch, PriceSnapshot* fetchedSnapshot) {
         PriceSnapshot localSnapshot{};
         std::wstring errorMessage;
         bool success = false;
@@ -75,7 +66,7 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
             const std::string text = error.what();
             errorMessage.assign(text.begin(), text.end());
         } catch (...) {
-            errorMessage = L"unknown source error";
+            errorMessage = L"未知数据源错误";
         }
 
         const int latencyMs = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -106,18 +97,13 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
             }
             return true;
         }
-
-        if (logFailure) {
-            appendLogLocked(RuntimeLogLevel::Warn,
-                std::wstring(quoteSourceLabel(config.kind)) + L" request failed: " + (errorMessage.empty() ? L"unknown" : errorMessage));
-        }
         return false;
     };
 
     bool snapshotUpdated = false;
     if (shouldPollPrimary) {
         PriceSnapshot fetched{};
-        snapshotUpdated = fetchConfig(primaryConfig, true, true, &fetched);
+        snapshotUpdated = fetchConfig(primaryConfig, true, &fetched);
         if (snapshotUpdated && snapshot) {
             *snapshot = fetched;
         }
@@ -138,16 +124,14 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
                     fallbackConfig = records_[index].config;
                 }
                 PriceSnapshot fallbackSnapshot{};
-                if (fetchConfig(fallbackConfig, true, true, &fallbackSnapshot)) {
+                if (fetchConfig(fallbackConfig, true, &fallbackSnapshot)) {
                     snapshotUpdated = true;
                     if (snapshot) {
                         *snapshot = fallbackSnapshot;
                     }
                     std::lock_guard<std::mutex> lock(mutex_);
                     lastSwitchAt_ = unixNow();
-                    lastSwitchReason_ = L"Primary source failed, switched to fallback source";
-                    appendLogLocked(RuntimeLogLevel::Info,
-                        L"Fallback source activated: " + std::wstring(quoteSourceLabel(fallbackConfig.kind)));
+                    lastSwitchReason_ = L"主数据源失败，已切换到回退数据源";
                     break;
                 }
             }
@@ -155,7 +139,7 @@ bool SourceManager::tick(PriceSnapshot* snapshot) {
     }
 
     if (shouldPollProbe && probeIndex != static_cast<size_t>(-1)) {
-        fetchConfig(probeConfig, false, false, nullptr);
+        fetchConfig(probeConfig, false, nullptr);
     }
 
     {

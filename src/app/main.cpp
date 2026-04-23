@@ -1,7 +1,9 @@
 #include "app.h"
 
+#include <shellapi.h>
+
 int WINAPI wWinMain(HINSTANCE instanceHandle, HINSTANCE, PWSTR commandLine, int) {
-    // Parse command line manually (wWinMain doesn't provide argc/argv)
+    // 手动解析命令行参数，wWinMain 不会直接提供 argc/argv。
     int argc = 0;
     wchar_t** argv = CommandLineToArgvW(commandLine, &argc);
 
@@ -13,7 +15,7 @@ int WINAPI wWinMain(HINSTANCE instanceHandle, HINSTANCE, PWSTR commandLine, int)
     }
 
     if (!initialized) {
-        return 0;  // Silent exit (e.g., skipped on weekends)
+        return 0;
     }
     return app.run();
 }

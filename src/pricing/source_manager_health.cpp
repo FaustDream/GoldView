@@ -4,6 +4,13 @@
 
 namespace goldview {
 
+namespace {
+
+constexpr int kDefaultSuccessRateThreshold = 95;
+constexpr int kDefaultLatencyThresholdMs = 500;
+
+}  // namespace
+
 int SourceManager::averageLatencyMs(const SourceRecord& record) const {
     if (record.history.empty()) {
         return 0;
@@ -33,30 +40,22 @@ double SourceManager::successRatePercent(const SourceRecord& record) const {
     return static_cast<double>(successCount) * 100.0 / static_cast<double>(record.history.size());
 }
 
-bool SourceManager::authReady(const QuoteSourceConfig&) const {
-    return true;
-}
-
 bool SourceManager::isUnhealthy(const SourceRecord& record) const {
     const size_t minimumWindow = static_cast<size_t>((std::max)(3, settings_.runtime.healthWindowSize / 4));
     if (record.history.size() < minimumWindow) {
         return false;
     }
-    if (successRatePercent(record) < static_cast<double>(settings_.runtime.successRateThreshold)) {
+    if (successRatePercent(record) < static_cast<double>(kDefaultSuccessRateThreshold)) {
         return true;
     }
-    return averageLatencyMs(record) > settings_.runtime.latencyThresholdMs;
+    return averageLatencyMs(record) > kDefaultLatencyThresholdMs;
 }
 
 SourceHealthSnapshot SourceManager::buildHealthSnapshotLocked(const SourceRecord& record) const {
     SourceHealthSnapshot snapshot{};
     snapshot.kind = record.config.kind;
     snapshot.transport = record.config.transport;
-    snapshot.enabled = record.config.enabled;
-    snapshot.authReady = authReady(record.config);
     snapshot.active = record.config.kind == activeSource_;
-    snapshot.priority = record.config.priority;
-    snapshot.weight = record.config.weight;
     snapshot.requestCount = record.requestCount;
     snapshot.successCount = record.successCount;
     snapshot.errorCount = record.errorCount;

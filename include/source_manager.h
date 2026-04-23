@@ -50,20 +50,22 @@ private:
     std::uint64_t lastSwitchAt_{0};
     std::wstring lastSwitchReason_{L"启动默认主源"};
     std::vector<SourceRecord> records_;
-    std::vector<RuntimeLogEntry> runtimeLogs_;
     mutable std::mutex mutex_;
 
     void rebuildSourcesLocked();
-    void appendLogLocked(RuntimeLogLevel level, const std::wstring& message);
     int averageLatencyMs(const SourceRecord& record) const;
     double successRatePercent(const SourceRecord& record) const;
-    bool authReady(const QuoteSourceConfig& config) const;
     bool isUnhealthy(const SourceRecord& record) const;
     int activeIntervalMs(const SourceRecord& record) const;
     int standbyIntervalMs(const SourceRecord& record) const;
     std::vector<size_t> rankedCandidatesLocked() const;
     size_t selectPreferredCandidateLocked(std::wstring* reason);
-    void recordAttemptLocked(SourceRecord& record, bool success, int latencyMs, const std::wstring& error, double price);
+    void recordAttemptLocked(
+        SourceRecord& record,
+        bool success,
+        int latencyMs,
+        const std::wstring& error,
+        double price);
     SourceHealthSnapshot buildHealthSnapshotLocked(const SourceRecord& record) const;
     size_t indexOfSourceLocked(QuoteSourceKind kind) const;
 };

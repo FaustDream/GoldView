@@ -1,25 +1,10 @@
 #include "app.h"
 
-#include <cstdint>
-#include <sstream>
-
 namespace goldview {
 
 namespace {
 
 constexpr int kTaskbarRecoveryThreshold = 3;
-
-std::wstring rectToString(const RECT& rect) {
-    std::wstringstream stream;
-    stream << L"(" << rect.left << L"," << rect.top << L"," << rect.right << L"," << rect.bottom << L")";
-    return stream.str();
-}
-
-std::wstring rectSizeToString(const RECT& rect) {
-    std::wstringstream stream;
-    stream << L"(" << (rect.right - rect.left) << L"," << (rect.bottom - rect.top) << L")";
-    return stream.str();
-}
 
 RECT screenRectToParentClient(HWND parent, const RECT& screenRect) {
     RECT clientRect = screenRect;
@@ -58,9 +43,8 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
 
     TaskbarRefreshResult result{};
     if (!taskbarHost_) {
-        result.failureReason = L"Taskbar host window is not available";
+        result.failureReason = L"任务栏宿主窗口不可用";
         result.layoutMode = L"hidden";
-        taskbarLogger_.error(result.failureReason);
         return result;
     }
 
@@ -68,9 +52,8 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
     if (!topology) {
         taskbarRefreshFailureCount_ += 1;
         result.recoveryScheduled = true;
-        result.failureReason = L"Failed to detect taskbar topology";
+        result.failureReason = L"任务栏拓扑检测失败";
         result.layoutMode = L"hidden";
-        taskbarLogger_.warn(result.failureReason + L", layoutMode=hidden, retry count=" + std::to_wstring(taskbarRefreshFailureCount_));
         if (taskbarRefreshFailureCount_ >= kTaskbarRecoveryThreshold) {
             hideTaskbarHost();
         } else if (taskbarHost_->isAttachedToTaskbarContainer()) {
@@ -91,23 +74,12 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
     result.taskbarContainerClass = topology->hostContainerClassName;
     result.taskListClass = topology->taskListClassName;
 
-    taskbarLogger_.info(
-        L"Topology detected taskbar=" + rectToString(topology->taskbarRect) +
-        L" taskList=" + rectToString(topology->taskListRect) +
-        L" taskListSize=" + rectSizeToString(topology->taskListRect) +
-        L" taskListUsable=" + std::wstring(topology->taskListUsable ? L"true" : L"false") +
-        L" hostClass=" + topology->hostContainerClassName +
-        L" taskClass=" + topology->taskListClassName +
-        L" tray=" + (topology->trayNotifyWnd ? rectToString(topology->trayRect) : std::wstring(L"(missing)")) +
-        L" chevron=" + (topology->chevronWnd ? rectToString(topology->chevronRect) : std::wstring(L"(missing)")));
-
     const auto metrics = taskbarMetrics_.calculate(*topology, settings_.display);
     if (!metrics.available) {
         taskbarRefreshFailureCount_ += 1;
         result.recoveryScheduled = true;
         result.failureReason = metrics.reason;
         result.layoutMode = L"hidden";
-        taskbarLogger_.warn(L"Taskbar metrics unavailable: " + metrics.reason + L", layoutMode=hidden, retry count=" + std::to_wstring(taskbarRefreshFailureCount_));
         if (taskbarRefreshFailureCount_ >= kTaskbarRecoveryThreshold) {
             hideTaskbarHost();
         } else if (taskbarHost_->isAttachedToTaskbarContainer()) {
@@ -132,7 +104,6 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
         result.recoveryScheduled = true;
         result.failureReason = anchor.reason;
         result.layoutMode = L"hidden";
-        taskbarLogger_.warn(L"Taskbar anchor unavailable: " + anchor.reason + L", layoutMode=hidden, retry count=" + std::to_wstring(taskbarRefreshFailureCount_));
         if (taskbarRefreshFailureCount_ >= kTaskbarRecoveryThreshold) {
             hideTaskbarHost();
         } else if (taskbarHost_->isAttachedToTaskbarContainer()) {
@@ -141,21 +112,12 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
         return result;
     }
 
-    taskbarLogger_.info(
-        L"Anchor resolved mode=" + std::to_wstring(static_cast<int>(anchor.mode)) +
-        L" host=" + rectToString(anchor.hostRect) +
-        L" safe=" + rectToString(anchor.safeRect) +
-        L" reason=" + anchor.reason);
-
     bool useTaskbarReflow = topology->taskListUsable && metrics.prefersTaskbarReflow;
     RECT finalHostRect = anchor.hostRect;
     if (useTaskbarReflow) {
         const RECT candidateRectInParent = screenRectToParentClient(topology->hostContainerWnd, finalHostRect);
         if (!rectFitsInsideParentClient(topology->hostContainerWnd, candidateRectInParent)) {
             useTaskbarReflow = false;
-            taskbarLogger_.warn(
-                L"Taskbar reflow downgraded to absolute-left-fallback because host rect mapped outside parent client: " +
-                rectToString(candidateRectInParent));
         }
     }
 
@@ -167,9 +129,8 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
     if (!taskbarHost_->attachToTaskbarContainer(hostParent)) {
         taskbarRefreshFailureCount_ += 1;
         result.recoveryScheduled = true;
-        result.failureReason = L"SetParent to taskbar container failed";
+        result.failureReason = L"挂载到任务栏容器失败";
         result.layoutMode = L"hidden";
-        taskbarLogger_.error(result.failureReason + L", layoutMode=hidden, retry count=" + std::to_wstring(taskbarRefreshFailureCount_) + L", lastError=" + std::to_wstring(GetLastError()));
         if (taskbarRefreshFailureCount_ >= kTaskbarRecoveryThreshold) {
             hideTaskbarHost();
         }
@@ -178,25 +139,15 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
 
     result.reparented = wasReparented;
     lastTaskbarContainer_ = hostParent;
-    taskbarLogger_.info(
-        L"Taskbar host parent attached class=" +
-        (useTaskbarReflow ? topology->hostContainerClassName : std::wstring(L"Shell_TrayWnd")) +
-        L" hwnd=" + std::to_wstring(reinterpret_cast<std::uintptr_t>(hostParent)) +
-        L" layoutMode=" + layoutMode);
 
     if (useTaskbarReflow) {
         if (slotController_.isAttachedTo(*topology)) {
-            taskbarLogger_.info(L"slotController=update layoutMode=" + layoutMode);
             slotController_.updateLayout(*topology, anchor.hostRect);
         } else {
-            taskbarLogger_.info(L"slotController=attach layoutMode=" + layoutMode);
             slotController_.attach(*topology, anchor.hostRect);
         }
     } else if (slotController_.state()) {
-        taskbarLogger_.info(L"slotController=restore layoutMode=" + layoutMode);
         slotController_.restore();
-    } else {
-        taskbarLogger_.info(L"slotController=skipped layoutMode=" + layoutMode);
     }
 
     if (useTaskbarReflow) {
@@ -204,9 +155,8 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
         if (!state) {
             taskbarRefreshFailureCount_ += 1;
             result.recoveryScheduled = true;
-            result.failureReason = L"Failed to attach taskbar slot controller";
+            result.failureReason = L"任务栏槽位控制器挂载失败";
             result.layoutMode = L"hidden";
-            taskbarLogger_.error(result.failureReason + L", layoutMode=hidden, retry count=" + std::to_wstring(taskbarRefreshFailureCount_));
             if (taskbarRefreshFailureCount_ >= kTaskbarRecoveryThreshold) {
                 taskbarHost_->detachFromTaskbarContainer();
                 taskbarHost_->hide();
@@ -214,9 +164,6 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
             return result;
         }
 
-        taskbarLogger_.info(
-            L"Task list original=" + rectToString(state->originalTaskListRect) +
-            L" adjusted=" + rectToString(state->currentTaskListRect));
         result.originalTaskListRect = state->originalTaskListRect;
         result.adjustedTaskListRect = state->currentTaskListRect;
         finalHostRect = state->goldViewRect;
@@ -226,10 +173,6 @@ TaskbarRefreshResult App::refreshTaskbarLayout() {
     taskbarHost_->applyBoundsInParent(hostRectInParent);
     taskbarHost_->show();
     taskbarRefreshFailureCount_ = 0;
-    taskbarLogger_.info(
-        L"Taskbar host bounds applied screen=" + rectToString(finalHostRect) +
-        L" parent=" + rectToString(hostRectInParent) +
-        L" layoutMode=" + layoutMode);
     result.hostRect = finalHostRect;
     result.shown = true;
     return result;

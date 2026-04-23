@@ -25,13 +25,11 @@ void SourceManager::updateSettings(const AppSettings& settings) {
     std::lock_guard<std::mutex> lock(mutex_);
     settings_ = settings;
     rebuildSourcesLocked();
-    appendLogLocked(RuntimeLogLevel::Info, L"Settings updated; rebuilding source manager state");
 }
 
 PriceServiceStatus SourceManager::currentStatus() const {
     std::lock_guard<std::mutex> lock(mutex_);
     PriceServiceStatus status{};
-    status.autoRefreshEnabled = settings_.runtime.autoRefreshEnabled;
     status.delayed = hasLastSuccessfulSnapshot_ ? unixNow() > lastSuccessfulAt_ + kStaleAfterSeconds : true;
     status.requestIntervalMs = settings_.runtime.activeRequestIntervalMs;
     status.activeSource = activeSource_;
@@ -42,7 +40,6 @@ PriceServiceStatus SourceManager::currentStatus() const {
     for (const auto& record : records_) {
         status.sourceHealth.push_back(buildHealthSnapshotLocked(record));
     }
-    status.logs = runtimeLogs_;
     return status;
 }
 
@@ -78,14 +75,6 @@ void SourceManager::rebuildSourcesLocked() {
     const size_t activeIndex = indexOfSourceLocked(activeSource_);
     if (activeIndex >= records_.size() && !records_.empty()) {
         activeSource_ = records_.front().config.kind;
-    }
-}
-
-void SourceManager::appendLogLocked(RuntimeLogLevel level, const std::wstring& message) {
-    runtimeLogs_.push_back(RuntimeLogEntry{level, unixNow(), message});
-    const size_t maxLogs = static_cast<size_t>((std::max)(20, settings_.runtime.logLimit));
-    while (runtimeLogs_.size() > maxLogs) {
-        runtimeLogs_.erase(runtimeLogs_.begin());
     }
 }
 

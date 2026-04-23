@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GoldView 均价计算器</title>
+    <link rel="stylesheet" href="./calculator.css">
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <header class="card-header">
+                <h1>GoldView 均价计算器</h1>
+                <p>在网页中直接完成买入均价计算与历史记录管理。</p>
+            </header>
+
+            <form id="calculatorForm" class="form-grid" novalidate>
+                <label for="oldPrice">原有单价</label>
+                <input id="oldPrice" name="oldPrice" type="text" autocomplete="off" placeholder="例如 720.50">
+
+                <label for="oldWeight">原有克重</label>
+                <input id="oldWeight" name="oldWeight" type="text" autocomplete="off" placeholder="例如 12.5">
+
+                <label for="newPrice">买入单价</label>
+                <input id="newPrice" name="newPrice" type="text" autocomplete="off" placeholder="例如 735.20">
+
+                <label for="newWeight">买入克重</label>
+                <input id="newWeight" name="newWeight" type="text" autocomplete="off" placeholder="例如 5.0">
+            </form>
+
+            <section class="result-row">
+                <div class="result-item">
+                    <span class="result-label">均价</span>
+                    <strong id="resultPrice">--</strong>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">总克重</span>
+                    <strong id="resultWeight">--</strong>
+                </div>
+            </section>
+
+            <p id="errorText" class="error-text" hidden></p>
+
+            <section class="actions">
+                <button id="calculateBtn" type="button">计算</button>
+                <button id="clearHistoryBtn" type="button" class="secondary">清空历史</button>
+            </section>
+        </section>
+
+        <section class="card history-card">
+            <header class="card-header">
+                <h2>最近计算记录</h2>
+            </header>
+            <ul id="historyList" class="history-list"></ul>
+            <p id="emptyHistory" class="empty-tip">暂无记录</p>
+        </section>
+    </main>
+
+    <script src="./app.js"></script>
+</body>
+</html>

@@ -87,7 +87,7 @@ bool TaskbarHost::create(HINSTANCE instanceHandle) {
     windowClass.lpfnWndProc = TaskbarHost::windowProc;
     windowClass.hInstance = instanceHandle;
     windowClass.lpszClassName = kTaskbarHostClassName;
-    windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
     RegisterClassW(&windowClass);
 
     windowHandle_ = CreateWindowExW(
@@ -124,7 +124,7 @@ void TaskbarHost::updateContent(const PriceSnapshot& snapshot, const DisplaySett
     settings_ = taskbar_text_style::normalizeDisplaySettings(settings);
     if (snapshot.currentPrice > 0.0) {
         wchar_t buffer[64]{};
-        swprintf_s(buffer, L"%.2f", snapshot.currentPrice);
+        swprintf_s(buffer, L"%.2f", normalizeDisplayedPrice(snapshot.currentPrice));
         priceText_ = buffer;
     } else {
         priceText_ = L"--.--";

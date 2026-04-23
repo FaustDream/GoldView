@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -26,12 +28,6 @@ enum class TextAlignment {
     Center,
 };
 
-enum class RuntimeLogLevel {
-    Info,
-    Warn,
-    Error,
-};
-
 inline const wchar_t* quoteSourceLabel(QuoteSourceKind source) {
     switch (source) {
     case QuoteSourceKind::Sina:
@@ -41,44 +37,6 @@ inline const wchar_t* quoteSourceLabel(QuoteSourceKind source) {
     case QuoteSourceKind::GoldApi:
     default:
         return L"Gold API";
-    }
-}
-
-inline const wchar_t* quoteSourceKey(QuoteSourceKind source) {
-    switch (source) {
-    case QuoteSourceKind::Sina:
-        return L"sina";
-    case QuoteSourceKind::Xwteam:
-        return L"xwteam";
-    case QuoteSourceKind::GoldApi:
-    default:
-        return L"gold-api";
-    }
-}
-
-inline const wchar_t* transportLabel(QuoteSourceTransport transport) {
-    switch (transport) {
-    case QuoteSourceTransport::Xhr:
-        return L"XHR";
-    case QuoteSourceTransport::Ws:
-        return L"WebSocket";
-    case QuoteSourceTransport::Html:
-        return L"HTML";
-    case QuoteSourceTransport::Api:
-    default:
-        return L"API";
-    }
-}
-
-inline const wchar_t* runtimeLogLevelLabel(RuntimeLogLevel level) {
-    switch (level) {
-    case RuntimeLogLevel::Warn:
-        return L"WARN";
-    case RuntimeLogLevel::Error:
-        return L"ERROR";
-    case RuntimeLogLevel::Info:
-    default:
-        return L"INFO";
     }
 }
 
@@ -103,29 +61,25 @@ struct DisplaySettings {
 };
 
 struct RuntimeSettings {
-    bool autoRefreshEnabled = true;
     bool launchAtStartup = false;
     bool launchOnWorkdaysOnly = true;
-    bool autoSwitchSource = true;
-    QuoteSourceKind preferredSource = QuoteSourceKind::Sina;
-    int successRateThreshold = 95;
-    int latencyThresholdMs = 500;
-    int recentOutputLimit = 50;
     int uiRefreshIntervalMs = 200;
     int activeRequestIntervalMs = 1000;
     int standbyRequestIntervalMs = 15000;
     int fallbackApiIntervalMs = 5000;
     int healthWindowSize = 20;
-    int logLimit = 300;
 };
+
+inline double normalizeDisplayedPrice(double price) {
+    if (price <= 0.0) {
+        return 0.0;
+    }
+    return std::round(price * 100.0) / 100.0;
+}
 
 struct QuoteSourceConfig {
     QuoteSourceKind kind = QuoteSourceKind::Sina;
     QuoteSourceTransport transport = QuoteSourceTransport::Xhr;
-    bool enabled = true;
-    int priority = 1;
-    int weight = 100;
-    std::wstring apiKey;
 };
 
 struct AppSettings {
@@ -137,9 +91,9 @@ struct AppSettings {
 inline AppSettings defaultAppSettings() {
     AppSettings settings{};
     settings.sources = {
-        QuoteSourceConfig{QuoteSourceKind::Sina, QuoteSourceTransport::Xhr, true, 1, 100, L""},
-        QuoteSourceConfig{QuoteSourceKind::Xwteam, QuoteSourceTransport::Xhr, true, 2, 90, L""},
-        QuoteSourceConfig{QuoteSourceKind::GoldApi, QuoteSourceTransport::Api, true, 3, 80, L""},
+        QuoteSourceConfig{QuoteSourceKind::Sina, QuoteSourceTransport::Xhr},
+        QuoteSourceConfig{QuoteSourceKind::Xwteam, QuoteSourceTransport::Xhr},
+        QuoteSourceConfig{QuoteSourceKind::GoldApi, QuoteSourceTransport::Api},
     };
     return settings;
 }
@@ -147,11 +101,7 @@ inline AppSettings defaultAppSettings() {
 struct SourceHealthSnapshot {
     QuoteSourceKind kind = QuoteSourceKind::Sina;
     QuoteSourceTransport transport = QuoteSourceTransport::Xhr;
-    bool enabled = true;
-    bool authReady = true;
     bool active = false;
-    int priority = 1;
-    int weight = 100;
     int requestCount = 0;
     int successCount = 0;
     int errorCount = 0;
@@ -163,22 +113,7 @@ struct SourceHealthSnapshot {
     std::wstring lastError;
 };
 
-struct RuntimeLogEntry {
-    RuntimeLogLevel level = RuntimeLogLevel::Info;
-    std::uint64_t timestamp = 0;
-    std::wstring message;
-};
-
-struct RecentOutputEntry {
-    std::wstring text;
-    std::wstring source;
-    double price = 0.0;
-    std::uint64_t timestamp = 0;
-    bool delayed = false;
-};
-
 struct PriceServiceStatus {
-    bool autoRefreshEnabled = true;
     bool delayed = false;
     int requestIntervalMs = 1000;
     QuoteSourceKind activeSource = QuoteSourceKind::Sina;
@@ -187,12 +122,6 @@ struct PriceServiceStatus {
     std::uint64_t lastSwitchAt = 0;
     std::wstring lastSwitchReason;
     std::vector<SourceHealthSnapshot> sourceHealth;
-    std::vector<RuntimeLogEntry> logs;
-};
-
-struct RuntimeViewState {
-    PriceServiceStatus status;
-    std::vector<RecentOutputEntry> recentOutputs;
 };
 
 struct TaskbarAnchor {
