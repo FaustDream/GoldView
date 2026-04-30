@@ -73,3 +73,12 @@ target_link_libraries(
     shlwapi
     ole32
 )
+
+add_custom_command(
+    TARGET GoldViewNative
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:GoldViewNative>
+        $<TARGET_FILE_DIR:GoldViewNative>
+    COMMAND_EXPAND_LISTS
+)
