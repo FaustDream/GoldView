@@ -9,11 +9,6 @@
 <body>
     <main class="page">
         <section class="card">
-            <header class="card-header">
-                <h1>GoldView 均价计算器</h1>
-                <p>在网页中直接完成买入均价计算与历史记录管理。</p>
-            </header>
-
             <form id="calculatorForm" class="form-grid" novalidate>
                 <label for="oldPrice">原有单价</label>
                 <input id="oldPrice" name="oldPrice" type="text" autocomplete="off" placeholder="例如 720.50">
@@ -21,11 +16,32 @@
                 <label for="oldWeight">原有克重</label>
                 <input id="oldWeight" name="oldWeight" type="text" autocomplete="off" placeholder="例如 12.5">
 
-                <label for="newPrice">买入单价</label>
-                <input id="newPrice" name="newPrice" type="text" autocomplete="off" placeholder="例如 735.20">
+                <div class="mode-row" role="group" aria-label="买入方式">
+                    <span>买入方式</span>
+                    <div class="mode-buttons">
+                        <button id="weightModeBtn" type="button" class="mode-button active" aria-pressed="true">按克重</button>
+                        <button id="amountModeBtn" type="button" class="mode-button" aria-pressed="false">按金额</button>
+                    </div>
+                </div>
 
-                <label for="newWeight">买入克重</label>
-                <input id="newWeight" name="newWeight" type="text" autocomplete="off" placeholder="例如 5.0">
+                <section id="weightModeFields" class="mode-fields">
+                    <label for="newPrice">买入单价</label>
+                    <input id="newPrice" name="newPrice" type="text" autocomplete="off" placeholder="例如 735.20">
+
+                    <label for="newWeight">买入克重</label>
+                    <input id="newWeight" name="newWeight" type="text" autocomplete="off" placeholder="例如 5.0">
+                </section>
+
+                <section id="amountModeFields" class="mode-fields" hidden>
+                    <label for="newAmount">买入金额</label>
+                    <input id="newAmount" name="newAmount" type="text" autocomplete="off" placeholder="例如 1000">
+
+                    <label for="amountPrice">每克价格</label>
+                    <input id="amountPrice" name="amountPrice" type="text" autocomplete="off" placeholder="例如 735.20">
+
+                    <label>可买克重</label>
+                    <output id="derivedWeight">--</output>
+                </section>
             </form>
 
             <section class="result-row">
@@ -42,7 +58,6 @@
             <p id="errorText" class="error-text" hidden></p>
 
             <section class="actions">
-                <button id="calculateBtn" type="button">计算</button>
                 <button id="clearHistoryBtn" type="button" class="secondary">清空历史</button>
             </section>
         </section>
@@ -56,6 +71,7 @@
         </section>
     </main>
 
+    <script src="./calc-core.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>

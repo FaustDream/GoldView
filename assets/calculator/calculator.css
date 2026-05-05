@@ -23,6 +23,10 @@ body {
     padding: 14px;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 .card-header h1,
 .card-header h2 {
     margin: 0;
@@ -39,19 +43,56 @@ body {
 }
 
 .form-grid {
-    margin-top: 14px;
     display: grid;
     grid-template-columns: 90px 1fr;
     gap: 8px 10px;
     align-items: center;
 }
 
-.form-grid input {
+.form-grid input,
+.form-grid output {
     height: 30px;
     border: 1px solid #b7b7b7;
     background: #ffffff;
     padding: 0 8px;
     font-size: 14px;
+}
+
+.form-grid output {
+    display: flex;
+    align-items: center;
+    color: #1f4e94;
+    font-weight: 700;
+}
+
+.mode-row,
+.mode-fields {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 90px 1fr;
+    gap: 8px 10px;
+    align-items: center;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mode-button {
+    height: 30px;
+    min-width: 76px;
+    border: 1px solid #9d9d9d;
+    background: #f6f6f6;
+    cursor: pointer;
+}
+
+.mode-button.active {
+    border-color: #1f4e94;
+    background: #dce8f8;
+    color: #153d77;
+    font-weight: 700;
 }
 
 .result-row {
@@ -132,6 +173,12 @@ body {
     }
 
     .form-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .mode-row,
+    .mode-fields {
         grid-template-columns: 1fr;
         gap: 6px;
     }
